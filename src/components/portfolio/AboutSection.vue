@@ -1,20 +1,20 @@
 <template>
-  <section id="about" class="py-5">
+  <section id="about" v-parallax="{ speed: 0.1 }" class="py-5">
     <div class="container">
       <div class="row">
         <div class="col-lg-8 mx-auto text-center mb-5">
-          <h2 class="display-6 fw-bold mb-3">
+          <h2 v-reveal="{ transform: 'translateY(30px)' }" class="display-6 fw-bold mb-3">
             About Me
           </h2>
-          <div class="divider mx-auto" />
-          <p class="lead text-muted">
+          <div v-reveal="{ delay: 100, transform: 'scaleX(0)' }" class="divider mx-auto" />
+          <p v-reveal="{ transform: 'translateY(20px)', delay: 200 }" class="lead text-muted">
             {{ profile.bio }}
           </p>
         </div>
       </div>
-      <div class="row">
+      <div v-stagger="{ delay: 150 }" class="row">
         <div class="col-md-4 mb-4">
-          <AppCard hover class="text-center h-100">
+          <AppCard v-reveal="{ transform: 'translateY(30px)' }" hover class="text-center h-100">
             <div class="about-icon">
               <i class="bi bi-geo-alt" />
             </div>
@@ -27,7 +27,7 @@
           </AppCard>
         </div>
         <div class="col-md-4 mb-4">
-          <AppCard hover class="text-center h-100">
+          <AppCard v-reveal="{ transform: 'translateY(30px)', delay: 100 }" hover class="text-center h-100">
             <div class="about-icon">
               <i class="bi bi-envelope" />
             </div>
@@ -40,7 +40,7 @@
           </AppCard>
         </div>
         <div class="col-md-4 mb-4">
-          <AppCard hover class="text-center h-100">
+          <AppCard v-reveal="{ transform: 'translateY(30px)', delay: 200 }" hover class="text-center h-100">
             <div class="about-icon">
               <i class="bi bi-briefcase" />
             </div>
@@ -50,6 +50,37 @@
             <p class="text-muted mb-0">
               {{ experience.length }}+ Years
             </p>
+          </AppCard>
+        </div>
+      </div>
+      
+      <div v-stagger="{ delay: 100 }" class="row mt-5">
+        <div class="col-md-6 mb-4">
+          <AppCard v-reveal="{ transform: 'translateX(-30px)' }" hover class="h-100">
+            <h5 class="mb-3 d-flex align-items-center gap-2">
+              <i class="bi bi-lightning text-primary" />
+              What I Do
+            </h5>
+            <ul class="list-unstyled">
+              <li v-for="item in whatIDo" :key="item" class="mb-2 d-flex align-items-start gap-2">
+                <i class="bi bi-check-circle-fill text-success mt-1" />
+                <span>{{ item }}</span>
+              </li>
+            </ul>
+          </AppCard>
+        </div>
+        <div class="col-md-6 mb-4">
+          <AppCard v-reveal="{ transform: 'translateX(30px)' }" hover class="h-100">
+            <h5 class="mb-3 d-flex align-items-center gap-2">
+              <i class="bi bi-heart text-danger" />
+              My Values
+            </h5>
+            <ul class="list-unstyled">
+              <li v-for="value in values" :key="value" class="mb-2 d-flex align-items-start gap-2">
+                <i class="bi bi-dot text-primary mt-1" />
+                <span>{{ value }}</span>
+              </li>
+            </ul>
           </AppCard>
         </div>
       </div>
@@ -63,6 +94,24 @@ import AppCard from '../common/AppCard.vue'
 
 const portfolioStore = usePortfolioStore()
 const { profile, experience } = portfolioStore
+
+const whatIDo = [
+  'Custom Web Application Development',
+  'UI/UX Design & Prototyping',
+  'API Design & Integration',
+  'Performance Optimization',
+  'Code Review & Mentoring',
+  'Technical Consulting',
+]
+
+const values = [
+  'Clean, maintainable code',
+  'User-first design thinking',
+  'Continuous learning & growth',
+  'Transparent communication',
+  'Delivering on promises',
+  'Building long-term relationships',
+]
 </script>
 
 <style scoped>

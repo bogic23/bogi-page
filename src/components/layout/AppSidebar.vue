@@ -1,5 +1,5 @@
 <template>
-  <aside class="sidebar" :class="{ 'sidebar--collapsed': isCollapsed }">
+  <aside class="sidebar" :class="{ 'sidebar--collapsed': isCollapsed, 'mobile-open': isMobileSidebarOpen }">
     <div class="sidebar-header">
       <router-link to="/dashboard" class="sidebar-brand">
         <i class="bi bi-hexagon-fill text-primary" />
@@ -56,18 +56,26 @@
   </aside>
   
   <!-- Mobile overlay -->
-  <div v-if="isMobileOpen" class="sidebar-overlay" @click="closeMobile" />
+  <div v-if="isMobileSidebarOpen" class="sidebar-overlay" @click="closeMobileSidebar" />
 </template>
 
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useTaskStore } from '../../stores/taskStore'
+import { useAppStore } from '../../stores/appStore'
 
 const route = useRoute()
 const taskStore = useTaskStore()
+const appStore = useAppStore()
+
 const isCollapsed = ref(false)
-const isMobileOpen = ref(false)
+
+// Use app store's mobile sidebar state
+const isMobileSidebarOpen = computed({
+  get: () => appStore.isMobileSidebarOpen,
+  set: () => appStore.toggleMobileSidebar()
+})
 
 const taskCount = computed(() => taskStore.incompleteTasks.length)
 
@@ -79,8 +87,8 @@ const toggleSidebar = () => {
   isCollapsed.value = !isCollapsed.value
 }
 
-const closeMobile = () => {
-  isMobileOpen.value = false
+const closeMobileSidebar = () => {
+  appStore.isMobileSidebarOpen = false
 }
 </script>
 

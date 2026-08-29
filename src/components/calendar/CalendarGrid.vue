@@ -20,37 +20,44 @@
       </div>
     </div>
     
-    <!-- Days of Week -->
-    <div class="row g-0 mb-2">
-      <div v-for="day in daysOfWeek" :key="day" class="col text-center fw-bold text-muted py-2">
-        {{ day }}
+    <!-- Calendar Grid Container -->
+    <div class="calendar-grid-container">
+      <!-- Days of Week Header -->
+      <div class="calendar-week-row calendar-header">
+        <div 
+          v-for="day in daysOfWeek" 
+          :key="day" 
+          class="calendar-week-day"
+        >
+          {{ day }}
+        </div>
       </div>
-    </div>
-    
-    <!-- Calendar Days -->
-    <div class="row g-0">
-      <div 
-        v-for="(day, index) in calendarDays" 
-        :key="index"
-        class="col calendar-day"
-        :class="{
-          'calendar-day--empty': !day,
-          'calendar-day--selected': day && isSelected(day),
-          'calendar-day--today': day && isToday(day)
-        }"
-        @click="day && selectDate(day)"
-      >
-        <div v-if="day" class="calendar-day-content">
-          <span class="day-number">{{ day.getDate() }}</span>
-          <div class="day-events">
-            <div 
-              v-for="event in getEventsForDay(day)" 
-              :key="event.id"
-              class="event-indicator"
-              :class="`event-indicator--${event.category}`"
-              @click.stop="showEventDetails(event)"
-            >
-              {{ event.title }}
+      
+      <!-- Calendar Weeks -->
+      <div v-for="(week, weekIndex) in weeks" :key="weekIndex" class="calendar-week-row">
+        <div 
+          v-for="(day, dayIndex) in week" 
+          :key="dayIndex"
+          class="calendar-week-day calendar-day"
+          :class="{
+            'calendar-day--empty': !day,
+            'calendar-day--selected': day && isSelected(day),
+            'calendar-day--today': day && isToday(day)
+          }"
+          @click="day && selectDate(day)"
+        >
+          <div v-if="day" class="calendar-day-content">
+            <span class="day-number">{{ day.getDate() }}</span>
+            <div class="day-events">
+              <div 
+                v-for="event in getEventsForDay(day)" 
+                :key="event.id"
+                class="event-indicator"
+                :class="`event-indicator--${event.category}`"
+                @click.stop="showEventDetails(event)"
+              >
+                {{ event.title }}
+              </div>
             </div>
           </div>
         </div>
@@ -76,31 +83,46 @@ const currentYear = computed(() => {
   return calendarStore.currentDate.getFullYear()
 })
 
-const calendarDays = computed(() => {
+const weeks = computed(() => {
   const year = calendarStore.currentDate.getFullYear()
   const month = calendarStore.currentDate.getMonth()
   
   const firstDay = new Date(year, month, 1)
   const lastDay = new Date(year, month + 1, 0)
   
-  const days = []
+  const weeks = []
+  let currentWeek = []
   
   // Add empty days for start of month
   for (let i = 0; i < firstDay.getDay(); i++) {
-    days.push(null)
+    currentWeek.push(null)
   }
   
   // Add days of month
   for (let day = 1; day <= lastDay.getDate(); day++) {
-    days.push(new Date(year, month, day))
+    currentWeek.push(new Date(year, month, day))
+    
+    if (currentWeek.length === 7) {
+      weeks.push(currentWeek)
+      currentWeek = []
+    }
   }
   
   // Add empty days to complete the last week
-  while (days.length % 7 !== 0) {
-    days.push(null)
+  while (currentWeek.length > 0 && currentWeek.length < 7) {
+    currentWeek.push(null)
   }
   
-  return days
+  if (currentWeek.length === 7) {
+    weeks.push(currentWeek)
+  }
+  
+  // Ensure at least 6 weeks for consistent height
+  while (weeks.length < 6) {
+    weeks.push([null, null, null, null, null, null, null])
+  }
+  
+  return weeks
 })
 
 const getEventsForDay = (day) => {
@@ -135,15 +157,52 @@ const showEventDetails = (event) => {
 </script>
 
 <style scoped>
-.calendar-day {
-  min-height: 100px;
+.calendar-grid-container {
   border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  overflow: hidden;
+  background: var(--color-surface);
+}
+
+.calendar-week-row {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.calendar-week-row:last-child {
+  border-bottom: none;
+}
+
+.calendar-header {
+  background: var(--color-background);
+  border-bottom: 2px solid var(--color-border);
+}
+
+.calendar-header .calendar-week-day {
+  font-weight: 600;
+  color: var(--color-muted);
+  font-size: 0.875rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  padding: var(--spacing-sm) var(--spacing-xs);
+}
+
+.calendar-week-day {
+  flex: 1;
+  min-height: 100px;
+  border-right: 1px solid var(--color-border);
   cursor: pointer;
   transition: all var(--transition-fast);
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
-.calendar-day:hover {
+.calendar-week-day:last-child {
+  border-right: none;
+}
+
+.calendar-week-day:hover:not(.calendar-day--empty) {
   background: var(--color-background);
 }
 
@@ -155,6 +214,17 @@ const showEventDetails = (event) => {
 .calendar-day--selected {
   background: rgba(14, 165, 233, 0.1);
   border-color: var(--color-primary);
+}
+
+.calendar-day--selected .day-number {
+  background: var(--color-primary);
+  color: white;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .calendar-day--today .day-number {
@@ -170,18 +240,23 @@ const showEventDetails = (event) => {
 
 .calendar-day-content {
   padding: var(--spacing-sm);
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 .day-number {
   font-weight: 600;
   margin-bottom: var(--spacing-xs);
   display: inline-block;
+  align-self: flex-start;
 }
 
 .day-events {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  margin-top: auto;
 }
 
 .event-indicator {
@@ -212,5 +287,21 @@ const showEventDetails = (event) => {
 
 .event-indicator--work {
   background: var(--color-secondary);
+}
+
+@media (max-width: 768px) {
+  .calendar-week-day {
+    min-height: 80px;
+    padding: var(--spacing-xs);
+  }
+  
+  .day-number {
+    font-size: 0.875rem;
+  }
+  
+  .event-indicator {
+    font-size: 0.65rem;
+    padding: 1px 3px;
+  }
 }
 </style>
