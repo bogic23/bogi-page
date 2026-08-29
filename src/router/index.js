@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { useAuthStore } from '@/stores/authStore'
 import DashboardLayout from '../layouts/DashboardLayout.vue'
 import PortfolioLayout from '../layouts/PortfolioLayout.vue'
 import LearningLayout from '../layouts/LearningLayout.vue'
@@ -7,12 +8,25 @@ const router = createRouter({
   history: createWebHistory(),
   routes: [
     {
+      path: '/login',
+      name: 'login',
+      component: () => import('../views/auth/LoginView.vue'),
+      meta: { requiresGuest: true }
+    },
+    {
+      path: '/register',
+      name: 'register',
+      component: () => import('../views/auth/RegisterView.vue'),
+      meta: { requiresGuest: true }
+    },
+    {
       path: '/',
       redirect: '/dashboard'
     },
     {
       path: '/portfolio',
       component: PortfolioLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -24,6 +38,7 @@ const router = createRouter({
     {
       path: '/',
       component: DashboardLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: 'dashboard',
@@ -55,6 +70,7 @@ const router = createRouter({
     {
       path: '/learning',
       component: LearningLayout,
+      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -81,8 +97,32 @@ const router = createRouter({
           component: () => import('../views/learning/QuizView.vue')
         }
       ]
+    },
+    {
+      path: '/:pathMatch(.*)*',
+      redirect: '/dashboard'
     }
   ]
+})
+
+router.beforeEach(async (to, from, next) => {
+  const authStore = useAuthStore()
+  
+  // Initialize auth if not already done
+  if (authStore.loading) {
+    await authStore.initAuth()
+  }
+  
+  const requiresAuth = to.matched.some(record => record.meta.requiresAuth)
+  const requiresGuest = to.matched.some(record => record.meta.requiresGuest)
+  
+  if (requiresAuth && !authStore.isAuthenticated) {
+    next({ name: 'login', query: { redirect: to.fullPath } })
+  } else if (requiresGuest && authStore.isAuthenticated) {
+    next({ name: 'dashboard' })
+  } else {
+    next()
+  }
 })
 
 export default router
