@@ -6,7 +6,9 @@ import {
   signOut,
   onAuthStateChanged,
   updateProfile,
-  sendPasswordResetEmail
+  sendPasswordResetEmail,
+  GoogleAuthProvider,
+  signInWithPopup
 } from 'firebase/auth'
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore'
 import { auth, db } from '@/firebase/firebase'
@@ -83,6 +85,24 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  const loginWithGoogle = async () => {
+    loading.value = true
+    error.value = null
+    try {
+      const provider = new GoogleAuthProvider()
+      provider.addScope('profile')
+      provider.addScope('email')
+      const userCredential = await signInWithPopup(auth, provider)
+      await fetchUserData(userCredential.user.uid)
+      return { success: true }
+    } catch (err) {
+      error.value = err.message
+      return { success: false, error: err.message }
+    } finally {
+      loading.value = false
+    }
+  }
+
   const logout = async () => {
     loading.value = true
     try {
@@ -123,6 +143,7 @@ export const useAuthStore = defineStore('auth', () => {
     initAuth,
     register,
     login,
+    loginWithGoogle,
     logout,
     resetPassword,
     clearError

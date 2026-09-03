@@ -1,7 +1,7 @@
 <template>
   <section ref="heroRef" class="hero-section">
     <div class="hero-background">
-      <div ref="canvasRef" class="particle-canvas" />
+      <canvas ref="canvasRef" class="particle-canvas" />
       <div class="gradient-orb orb-1" />
       <div class="gradient-orb orb-2" />
       <div class="gradient-orb orb-3" />

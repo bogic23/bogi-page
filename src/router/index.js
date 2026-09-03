@@ -21,27 +21,26 @@ const router = createRouter({
     },
     {
       path: '/',
-      redirect: '/dashboard'
-    },
-    {
-      path: '/portfolio',
+      name: 'portfolio',
       component: PortfolioLayout,
-      meta: { requiresAuth: true },
       children: [
         {
           path: '',
-          name: 'portfolio',
           component: () => import('../views/portfolio/PortfolioView.vue')
         }
       ]
     },
     {
-      path: '/',
+      path: '/portfolio',
+      redirect: '/'
+    },
+    {
+      path: '/dashboard',
       component: DashboardLayout,
       meta: { requiresAuth: true },
       children: [
         {
-          path: 'dashboard',
+          path: '',
           name: 'dashboard',
           component: () => import('../views/dashboard/DashboardView.vue')
         },
@@ -100,7 +99,7 @@ const router = createRouter({
     },
     {
       path: '/:pathMatch(.*)*',
-      redirect: '/dashboard'
+      redirect: '/'
     }
   ]
 })
