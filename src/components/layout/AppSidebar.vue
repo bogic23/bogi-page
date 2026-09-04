@@ -23,6 +23,11 @@
         <span v-if="!isCollapsed">Learning</span>
       </router-link>
       
+      <router-link to="/dashboard/scores" class="nav-link-custom" :class="{ active: isActive('scores') }">
+        <i class="bi bi-music-note-beamed" />
+        <span v-if="!isCollapsed">My Scores</span>
+      </router-link>
+      
       <div class="sidebar-divider" />
       
       <router-link to="/portfolio" class="nav-link-custom">
