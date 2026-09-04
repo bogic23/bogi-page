@@ -31,7 +31,7 @@ defineProps({
   variant: {
     type: String,
     default: 'default',
-    validator: (value) => ['default', 'primary', 'success', 'warning', 'danger'].includes(value)
+    validator: (value) => ['default', 'primary', 'success', 'warning', 'danger', 'info'].includes(value)
   },
   hover: {
     type: Boolean,
@@ -132,6 +132,14 @@ defineProps({
 
 .app-card--danger:hover {
   box-shadow: var(--shadow-xl), 0 0 30px rgba(239, 68, 68, 0.2);
+}
+
+.app-card--info {
+  border-top: 4px solid var(--color-info);
+}
+
+.app-card--info:hover {
+  box-shadow: var(--shadow-xl), 0 0 30px rgba(14, 165, 233, 0.2);
 }
 
 @media (prefers-reduced-motion: reduce) {

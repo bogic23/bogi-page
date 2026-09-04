@@ -277,12 +277,14 @@ const initMouseParallax = () => {
 }
 
 const statsObserver = ref(null)
+let cleanupParticles = null
+let cleanupParallax = null
 
 onMounted(async () => {
   await nextTick()
   
-  const cleanupParticles = initParticles()
-  const cleanupParallax = initMouseParallax()
+  cleanupParticles = initParticles()
+  cleanupParallax = initMouseParallax()
   
   // Observe stats for counter animation
   const statsEl = document.querySelector('.hero-stats')
@@ -302,12 +304,12 @@ onMounted(async () => {
     }, { threshold: 0.5 })
     statsObserver.value.observe(statsEl)
   }
-  
-  onUnmounted(() => {
-    cleanupParticles()
-    cleanupParallax()
-    statsObserver.value?.disconnect()
-  })
+})
+
+onUnmounted(() => {
+  cleanupParticles?.()
+  cleanupParallax?.()
+  statsObserver.value?.disconnect()
 })
 </script>
 

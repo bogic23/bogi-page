@@ -48,7 +48,8 @@ const close = () => {
 }
 </script>
 
-<style scoped>
+<style>
+/* Global styles for Teleport - must not be scoped */
 .modal-overlay {
   position: fixed;
   inset: 0;

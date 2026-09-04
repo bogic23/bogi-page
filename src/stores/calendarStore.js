@@ -27,7 +27,10 @@ export const useCalendarStore = defineStore('calendar', () => {
   // Initialize listener
   const initListener = () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || unsubscribe.value) return
+    if (!authStore.isAuthenticated || unsubscribe.value) {
+      loading.value = false
+      return
+    }
 
     loading.value = true
     const userId = authStore.user.value?.uid

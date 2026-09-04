@@ -264,311 +264,311 @@
     </div>
 
     <!-- Task Modal -->
-    <div v-if="showTaskModal" class="modal-overlay" @click.self="closeTaskModal">
-      <div class="modal auth-modal">
-        <div class="modal-header">
-          <h5>{{ editingTask ? 'Edit Task' : 'New Task' }}</h5>
-          <button class="btn-close" @click="closeTaskModal" />
+    <AppModal v-model="showTaskModal" :title="editingTask ? 'Edit Task' : 'New Task'" size="md">
+      <form @submit.prevent="saveTask">
+        <div class="form-group mb-3">
+          <label class="form-label">Title *</label>
+          <input
+            v-model="taskForm.title"
+            type="text"
+            class="form-control"
+            required
+            @input="clearTaskError('title')"
+          >
+          <div v-if="taskErrors.title" class="text-danger small">
+            {{ taskErrors.title }}
+          </div>
         </div>
-        <form @submit.prevent="saveTask">
-          <div class="modal-body">
-            <div class="form-group mb-3">
-              <label class="form-label">Title *</label>
-              <input
-                v-model="taskForm.title"
-                type="text"
-                class="form-control"
-                required
-                @input="clearTaskError('title')"
-              >
-              <div v-if="taskErrors.title" class="text-danger small">
-                {{ taskErrors.title }}
-              </div>
-            </div>
-            <div class="form-group mb-3">
-              <label class="form-label">Description</label>
-              <textarea v-model="taskForm.description" class="form-control" rows="3" />
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-6">
-                <label class="form-label">Due Date</label>
-                <input v-model="taskForm.dueDate" type="date" class="form-control">
-              </div>
-              <div class="col-6">
-                <label class="form-label">Priority</label>
-                <select v-model="taskForm.priority" class="form-select">
-                  <option value="low">
-                    Low
-                  </option>
-                  <option value="medium">
-                    Medium
-                  </option>
-                  <option value="high">
-                    High
-                  </option>
-                </select>
-              </div>
-            </div>
-            <div class="form-group mb-3">
-              <label class="form-label">Category</label>
-              <input
-                v-model="taskForm.category"
-                type="text"
-                class="form-control"
-                placeholder="e.g., Work, Personal"
-              >
-            </div>
-            <div v-if="taskError" class="alert alert-danger">
-              {{ taskError }}
-            </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Description</label>
+          <textarea v-model="taskForm.description" class="form-control" rows="3" />
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label">Due Date</label>
+            <input v-model="taskForm.dueDate" type="date" class="form-control">
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeTaskModal">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="taskSaving">
-              <span v-if="taskSaving" class="spinner-border spinner-border-sm me-2" />
-              {{ editingTask ? 'Update' : 'Create' }}
-            </button>
+          <div class="col-6">
+            <label class="form-label">Priority</label>
+            <select v-model="taskForm.priority" class="form-select">
+              <option value="low">
+                Low
+              </option>
+              <option value="medium">
+                Medium
+              </option>
+              <option value="high">
+                High
+              </option>
+            </select>
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Category</label>
+          <input
+            v-model="taskForm.category"
+            type="text"
+            class="form-control"
+            placeholder="e.g., Work, Personal"
+          >
+        </div>
+        <div v-if="taskError" class="alert alert-danger">
+          {{ taskError }}
+        </div>
+      </form>
+      <template #footer>
+        <button type="button" class="btn btn-secondary" @click="closeTaskModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="taskSaving"
+          @click="saveTask"
+        >
+          <span v-if="taskSaving" class="spinner-border spinner-border-sm me-2" />
+          {{ editingTask ? 'Update' : 'Create' }}
+        </button>
+      </template>
+    </AppModal>
 
     <!-- Event Modal -->
-    <div v-if="showEventModal" class="modal-overlay" @click.self="closeEventModal">
-      <div class="modal auth-modal">
-        <div class="modal-header">
-          <h5>{{ editingEvent ? 'Edit Event' : 'New Event' }}</h5>
-          <button class="btn-close" @click="closeEventModal" />
+    <AppModal v-model="showEventModal" :title="editingEvent ? 'Edit Event' : 'New Event'" size="md">
+      <form @submit.prevent="saveEvent">
+        <div class="form-group mb-3">
+          <label class="form-label">Title *</label>
+          <input
+            v-model="eventForm.title"
+            type="text"
+            class="form-control"
+            required
+            @input="clearEventError('title')"
+          >
+          <div v-if="eventErrors.title" class="text-danger small">
+            {{ eventErrors.title }}
+          </div>
         </div>
-        <form @submit.prevent="saveEvent">
-          <div class="modal-body">
-            <div class="form-group mb-3">
-              <label class="form-label">Title *</label>
-              <input
-                v-model="eventForm.title"
-                type="text"
-                class="form-control"
-                required
-                @input="clearEventError('title')"
-              >
-              <div v-if="eventErrors.title" class="text-danger small">
-                {{ eventErrors.title }}
-              </div>
-            </div>
-            <div class="form-group mb-3">
-              <label class="form-label">Description</label>
-              <textarea v-model="eventForm.description" class="form-control" rows="3" />
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-6">
-                <label class="form-label">Start *</label>
-                <input
-                  v-model="eventForm.start"
-                  type="datetime-local"
-                  class="form-control"
-                  required
-                  @input="clearEventError('start')"
-                >
-              </div>
-              <div class="col-6">
-                <label class="form-label">End *</label>
-                <input
-                  v-model="eventForm.end"
-                  type="datetime-local"
-                  class="form-control"
-                  required
-                  @input="clearEventError('end')"
-                >
-              </div>
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-6">
-                <label class="form-label">Category</label>
-                <select v-model="eventForm.category" class="form-select">
-                  <option value="">
-                    None
-                  </option>
-                  <option value="meeting">
-                    Meeting
-                  </option>
-                  <option value="appointment">
-                    Appointment
-                  </option>
-                  <option value="reminder">
-                    Reminder
-                  </option>
-                  <option value="personal">
-                    Personal
-                  </option>
-                  <option value="work">
-                    Work
-                  </option>
-                </select>
-              </div>
-              <div class="col-6">
-                <label class="form-label">Location</label>
-                <input
-                  v-model="eventForm.location"
-                  type="text"
-                  class="form-control"
-                  placeholder="Location or video link"
-                >
-              </div>
-            </div>
-            <div class="form-check mb-3">
-              <input
-                id="allDay"
-                v-model="eventForm.allDay"
-                class="form-check-input"
-                type="checkbox"
-              >
-              <label class="form-check-label" for="allDay">All day</label>
-            </div>
-            <div v-if="eventError" class="alert alert-danger">
-              {{ eventError }}
-            </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Description</label>
+          <textarea v-model="eventForm.description" class="form-control" rows="3" />
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label">Start *</label>
+            <input
+              v-model="eventForm.start"
+              type="datetime-local"
+              class="form-control"
+              required
+              @input="clearEventError('start')"
+            >
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeEventModal">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="eventSaving">
-              <span v-if="eventSaving" class="spinner-border spinner-border-sm me-2" />
-              {{ editingEvent ? 'Update' : 'Create' }}
-            </button>
+          <div class="col-6">
+            <label class="form-label">End *</label>
+            <input
+              v-model="eventForm.end"
+              type="datetime-local"
+              class="form-control"
+              required
+              @input="clearEventError('end')"
+            >
           </div>
-        </form>
-      </div>
-    </div>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label">Category</label>
+            <select v-model="eventForm.category" class="form-select">
+              <option value="">
+                None
+              </option>
+              <option value="meeting">
+                Meeting
+              </option>
+              <option value="appointment">
+                Appointment
+              </option>
+              <option value="reminder">
+                Reminder
+              </option>
+              <option value="personal">
+                Personal
+              </option>
+              <option value="work">
+                Work
+              </option>
+            </select>
+          </div>
+          <div class="col-6">
+            <label class="form-label">Location</label>
+            <input
+              v-model="eventForm.location"
+              type="text"
+              class="form-control"
+              placeholder="Location or video link"
+            >
+          </div>
+        </div>
+        <div class="form-check mb-3">
+          <input
+            id="allDay"
+            v-model="eventForm.allDay"
+            class="form-check-input"
+            type="checkbox"
+          >
+          <label class="form-check-label" for="allDay">All day</label>
+        </div>
+        <div v-if="eventError" class="alert alert-danger">
+          {{ eventError }}
+        </div>
+      </form>
+      <template #footer>
+        <button type="button" class="btn btn-secondary" @click="closeEventModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="eventSaving"
+          @click="saveEvent"
+        >
+          <span v-if="eventSaving" class="spinner-border spinner-border-sm me-2" />
+          {{ editingEvent ? 'Update' : 'Create' }}
+        </button>
+      </template>
+    </AppModal>
 
     <!-- Note Modal -->
-    <div v-if="showNoteModal" class="modal-overlay" @click.self="closeNoteModal">
-      <div class="modal auth-modal modal-lg">
-        <div class="modal-header">
-          <h5>{{ editingNote ? 'Edit Note' : 'New Note' }}</h5>
-          <button class="btn-close" @click="closeNoteModal" />
+    <AppModal v-model="showNoteModal" :title="editingNote ? 'Edit Note' : 'New Note'" size="lg">
+      <form @submit.prevent="saveNote">
+        <div class="form-group mb-3">
+          <label class="form-label">Title *</label>
+          <input
+            v-model="noteForm.title"
+            type="text"
+            class="form-control"
+            required
+            @input="clearNoteError('title')"
+          >
+          <div v-if="noteErrors.title" class="text-danger small">
+            {{ noteErrors.title }}
+          </div>
         </div>
-        <form @submit.prevent="saveNote">
-          <div class="modal-body">
-            <div class="form-group mb-3">
-              <label class="form-label">Title *</label>
-              <input
-                v-model="noteForm.title"
-                type="text"
-                class="form-control"
-                required
-                @input="clearNoteError('title')"
-              >
-              <div v-if="noteErrors.title" class="text-danger small">
-                {{ noteErrors.title }}
-              </div>
-            </div>
-            <div class="form-group mb-3">
-              <label class="form-label">Content *</label>
-              <textarea
-                v-model="noteForm.content"
-                class="form-control"
-                rows="8"
-                required
-                @input="clearNoteError('content')"
-              />
-              <div v-if="noteErrors.content" class="text-danger small">
-                {{ noteErrors.content }}
-              </div>
-            </div>
-            <div class="row g-3 mb-3">
-              <div class="col-6">
-                <label class="form-label">Category</label>
-                <input
-                  v-model="noteForm.category"
-                  type="text"
-                  class="form-control"
-                  placeholder="e.g., Ideas, Meeting Notes"
-                >
-              </div>
-              <div class="col-6">
-                <label class="form-label">Tags (comma separated)</label>
-                <input
-                  v-model="noteForm.tagsInput"
-                  type="text"
-                  class="form-control"
-                  placeholder="tag1, tag2, tag3"
-                >
-              </div>
-            </div>
-            <div class="form-check mb-3">
-              <input
-                id="pinned"
-                v-model="noteForm.pinned"
-                class="form-check-input"
-                type="checkbox"
-              >
-              <label class="form-check-label" for="pinned">Pin this note</label>
-            </div>
-            <div v-if="noteError" class="alert alert-danger">
-              {{ noteError }}
-            </div>
+        <div class="form-group mb-3">
+          <label class="form-label">Content *</label>
+          <textarea
+            v-model="noteForm.content"
+            class="form-control"
+            rows="8"
+            required
+            @input="clearNoteError('content')"
+          />
+          <div v-if="noteErrors.content" class="text-danger small">
+            {{ noteErrors.content }}
           </div>
-          <div class="modal-footer">
-            <button type="button" class="btn btn-secondary" @click="closeNoteModal">
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary" :disabled="noteSaving">
-              <span v-if="noteSaving" class="spinner-border spinner-border-sm me-2" />
-              {{ editingNote ? 'Update' : 'Create' }}
-            </button>
+        </div>
+        <div class="row g-3 mb-3">
+          <div class="col-6">
+            <label class="form-label">Category</label>
+            <input
+              v-model="noteForm.category"
+              type="text"
+              class="form-control"
+              placeholder="e.g., Ideas, Meeting Notes"
+            >
           </div>
-        </form>
-      </div>
-    </div>
+          <div class="col-6">
+            <label class="form-label">Tags (comma separated)</label>
+            <input
+              v-model="noteForm.tagsInput"
+              type="text"
+              class="form-control"
+              placeholder="tag1, tag2, tag3"
+            >
+          </div>
+        </div>
+        <div class="form-check mb-3">
+          <input
+            id="pinned"
+            v-model="noteForm.pinned"
+            class="form-check-input"
+            type="checkbox"
+          >
+          <label class="form-check-label" for="pinned">Pin this note</label>
+        </div>
+        <div v-if="noteError" class="alert alert-danger">
+          {{ noteError }}
+        </div>
+      </form>
+      <template #footer>
+        <button type="button" class="btn btn-secondary" @click="closeNoteModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="noteSaving"
+          @click="saveNote"
+        >
+          <span v-if="noteSaving" class="spinner-border spinner-border-sm me-2" />
+          {{ editingNote ? 'Update' : 'Create' }}
+        </button>
+      </template>
+    </AppModal>
 
     <!-- Delete Confirmation Modal -->
-    <div v-if="showDeleteModal" class="modal-overlay" @click.self="closeDeleteModal">
-      <div class="modal auth-modal" style="max-width: 400px;">
-        <div class="modal-header">
-          <h5>Confirm Delete</h5>
-          <button class="btn-close" @click="closeDeleteModal" />
-        </div>
-        <div class="modal-body">
-          <p>Are you sure you want to delete <strong>{{ deleteItemType }}</strong> <em>"{{ deleteItemName }}"</em>?</p>
-          <p class="text-danger small">
-            This action cannot be undone.
-          </p>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="btn btn-secondary" @click="closeDeleteModal">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-danger"
-            :disabled="deleting"
-            @click="executeDelete"
-          >
-            <span v-if="deleting" class="spinner-border spinner-border-sm me-2" />
-            Delete
-          </button>
-        </div>
+    <AppModal v-model="showDeleteModal" title="Confirm Delete" size="sm">
+      <div class="text-center">
+        <p>Are you sure you want to delete <strong>{{ deleteItemType }}</strong> <em>"{{ deleteItemName }}"</em>?</p>
+        <p class="text-danger small">
+          This action cannot be undone.
+        </p>
       </div>
-    </div>
+      <template #footer>
+        <button type="button" class="btn btn-secondary" @click="closeDeleteModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          :disabled="deleting"
+          @click="executeDelete"
+        >
+          <span v-if="deleting" class="spinner-border spinner-border-sm me-2" />
+          Delete
+        </button>
+      </template>
+    </AppModal>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useNoteStore } from '@/stores/noteStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { format, formatDistanceToNow } from 'date-fns'
+import AppModal from '@/components/common/AppModal.vue'
+import { useAuthStore } from '@/stores/authStore'
 
 const taskStore = useTaskStore()
 const noteStore = useNoteStore()
 const calendarStore = useCalendarStore()
+const authStore = useAuthStore()
 
 // Initialize listeners
-onMounted(() => {
+onMounted(async () => {
+  // Wait for auth to be initialized
+  if (authStore.loading) {
+    await new Promise(resolve => {
+      const unwatch = watch(() => authStore.loading, (loading) => {
+        if (!loading) {
+          unwatch()
+          resolve()
+        }
+      })
+    })
+  }
+  
   taskStore.initListener()
   noteStore.initListener()
   calendarStore.initListener()
@@ -1106,78 +1106,6 @@ const executeDelete = async () => {
   padding: 0.25rem 0.5rem;
 }
 
-/* Modal Styles */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: var(--spacing-lg);
-  z-index: 9999;
-  animation: fadeIn 0.2s ease;
-}
-
-.auth-modal {
-  background: var(--color-surface);
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-xl);
-  width: 100%;
-  max-width: 500px;
-  border: 1px solid var(--color-border);
-  animation: slideUp 0.3s ease;
-  max-height: 90vh;
-  overflow-y: auto;
-  position: relative;
-  min-height: 200px;
-}
-
-.auth-modal.modal-lg {
-  max-width: 700px;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: var(--spacing-lg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-header h5 {
-  margin: 0;
-  font-size: var(--font-size-lg);
-  font-weight: 600;
-  color: var(--color-text);
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: var(--font-size-xl);
-  color: var(--color-muted);
-  cursor: pointer;
-  padding: var(--spacing-xs);
-  line-height: 1;
-}
-
-.btn-close:hover {
-  color: var(--color-text);
-}
-
-.modal-body {
-  padding: var(--spacing-lg);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: var(--spacing-md);
-  padding: var(--spacing-lg);
-  border-top: 1px solid var(--color-border);
-}
-
 .form-label {
   font-weight: 500;
   color: var(--color-text);
@@ -1204,22 +1132,6 @@ const executeDelete = async () => {
 
 .form-check-input {
   margin-top: 0.25em;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
 }
 
 @media (max-width: 991.98px) {
