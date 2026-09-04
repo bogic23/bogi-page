@@ -21,11 +21,11 @@ const router = createRouter({
     },
     {
       path: '/',
-      name: 'portfolio',
       component: PortfolioLayout,
       children: [
         {
           path: '',
+          name: 'portfolio',
           component: () => import('../views/portfolio/PortfolioView.vue')
         }
       ]
@@ -58,6 +58,11 @@ const router = createRouter({
           path: 'notes',
           name: 'notes',
           component: () => import('../views/dashboard/NotesView.vue')
+        },
+        {
+          path: 'activity',
+          name: 'activity',
+          component: () => import('../views/dashboard/MyActivityView.vue')
         },
         {
           path: 'settings',

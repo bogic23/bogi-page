@@ -3,9 +3,11 @@
     <PageLoader v-if="authLoading" />
     <template v-else>
       <ScrollProgress />
-      <PageTransition>
-        <router-view />
-      </PageTransition>
+      <router-view v-slot="{ Component }">
+        <PageTransition>
+          <component :is="Component" />
+        </PageTransition>
+      </router-view>
     </template>
   </div>
 </template>

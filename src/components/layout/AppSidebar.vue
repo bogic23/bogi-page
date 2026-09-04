@@ -13,20 +13,9 @@
         <span v-if="!isCollapsed">Dashboard</span>
       </router-link>
       
-      <router-link to="/tasks" class="nav-link-custom" :class="{ active: isActive('tasks') }">
-        <i class="bi bi-check2-square" />
-        <span v-if="!isCollapsed">Tasks</span>
-        <span class="badge bg-primary ms-auto">{{ taskCount }}</span>
-      </router-link>
-      
-      <router-link to="/calendar" class="nav-link-custom" :class="{ active: isActive('calendar') }">
-        <i class="bi bi-calendar3" />
-        <span v-if="!isCollapsed">Calendar</span>
-      </router-link>
-      
-      <router-link to="/notes" class="nav-link-custom" :class="{ active: isActive('notes') }">
-        <i class="bi bi-journal-text" />
-        <span v-if="!isCollapsed">Notes</span>
+      <router-link to="/dashboard/activity" class="nav-link-custom" :class="{ active: isActive('activity') }">
+        <i class="bi bi-activity" />
+        <span v-if="!isCollapsed">My Activity</span>
       </router-link>
       
       <router-link to="/learning" class="nav-link-custom" :class="{ active: isActive('learning') }">
@@ -62,22 +51,14 @@
 <script setup>
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
-import { useTaskStore } from '../../stores/taskStore'
 import { useAppStore } from '../../stores/appStore'
 
 const route = useRoute()
-const taskStore = useTaskStore()
 const appStore = useAppStore()
 
 const isCollapsed = ref(false)
 
-// Use app store's mobile sidebar state
-const isMobileSidebarOpen = computed({
-  get: () => appStore.isMobileSidebarOpen,
-  set: () => appStore.toggleMobileSidebar()
-})
-
-const taskCount = computed(() => taskStore.incompleteTasks.length)
+const isMobileSidebarOpen = computed(() => appStore.isMobileSidebarOpen)
 
 const isActive = (name) => {
   return route.name === name
