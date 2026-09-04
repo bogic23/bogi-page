@@ -137,6 +137,12 @@ export const useTaskStore = defineStore('tasks', () => {
   // Actions
   const addTask = async (task) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -158,6 +164,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const updateTask = async (id, updates) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -174,6 +186,12 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const deleteTask = async (id) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -186,6 +204,13 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   const toggleTaskComplete = async (id) => {
+    const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const task = tasks.value.find(t => t.id === id)
     if (task) {
       await updateTask(id, {

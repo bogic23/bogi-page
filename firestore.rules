@@ -13,7 +13,10 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null
           && request.resource.data.userId == userId
-          && request.resource.data.keys().hasAll(['title', 'completed', 'createdAt', 'userId']);
+          && request.resource.data.keys().hasAll(['title', 'completed', 'createdAt', 'userId'])
+          && request.resource.data.title is string
+          && request.resource.data.completed is bool
+          && request.resource.data.userId == userId;
       }
 
       // Notes subcollection - users can only access their own notes
@@ -21,7 +24,10 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null
           && request.resource.data.userId == userId
-          && request.resource.data.keys().hasAll(['title', 'content', 'createdAt', 'userId']);
+          && request.resource.data.keys().hasAll(['title', 'content', 'createdAt', 'userId'])
+          && request.resource.data.title is string
+          && request.resource.data.content is string
+          && request.resource.data.userId == userId;
       }
 
       // Events subcollection - users can only access their own events
@@ -29,7 +35,9 @@ service cloud.firestore {
         allow read, write: if request.auth != null && request.auth.uid == userId;
         allow create: if request.auth != null
           && request.resource.data.userId == userId
-          && request.resource.data.keys().hasAll(['title', 'start', 'end', 'userId']);
+          && request.resource.data.keys().hasAll(['title', 'start', 'end', 'userId'])
+          && request.resource.data.title is string
+          && request.resource.data.userId == userId;
       }
     }
 

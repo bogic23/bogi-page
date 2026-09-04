@@ -100,6 +100,12 @@ export const useCalendarStore = defineStore('calendar', () => {
   // Actions
   const addEvent = async (event) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -120,6 +126,12 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const updateEvent = async (id, updates) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -136,6 +148,12 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const deleteEvent = async (id) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 

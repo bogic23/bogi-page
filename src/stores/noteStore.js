@@ -144,6 +144,12 @@ export const useNoteStore = defineStore('notes', () => {
   // Actions
   const addNote = async (note) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -166,6 +172,12 @@ export const useNoteStore = defineStore('notes', () => {
 
   const updateNote = async (id, updates) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -182,6 +194,12 @@ export const useNoteStore = defineStore('notes', () => {
 
   const deleteNote = async (id) => {
     const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const userId = authStore.user.value?.uid
     if (!userId) throw new Error('Not authenticated')
 
@@ -194,6 +212,13 @@ export const useNoteStore = defineStore('notes', () => {
   }
 
   const togglePin = async (id) => {
+    const authStore = useAuthStore()
+    
+    // Wait for auth to be ready if still loading
+    if (authStore.loading) {
+      await authStore.initAuth()
+    }
+    
     const note = notes.value.find(n => n.id === id)
     if (note) {
       await updateNote(id, { pinned: !note.pinned })
