@@ -39,7 +39,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid))
       if (userDoc.exists()) {
-        user.value = { ...user.value, ...userDoc.data() }
+        user.value = { ...(user.value || {}), ...userDoc.data(), uid }
       }
     } catch (err) {
       console.error('Error fetching user data:', err)
@@ -75,6 +75,7 @@ export const useAuthStore = defineStore('auth', () => {
     error.value = null
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
+      user.value = userCredential.user
       await fetchUserData(userCredential.user.uid)
       return { success: true }
     } catch (err) {
@@ -93,6 +94,7 @@ export const useAuthStore = defineStore('auth', () => {
       provider.addScope('profile')
       provider.addScope('email')
       const userCredential = await signInWithPopup(auth, provider)
+      user.value = userCredential.user
       await fetchUserData(userCredential.user.uid)
       return { success: true }
     } catch (err) {

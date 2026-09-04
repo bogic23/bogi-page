@@ -49,9 +49,13 @@
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '../../stores/appStore'
+import { useAuthStore } from '../../stores/authStore'
+import { useRouter } from 'vue-router'
 
 const route = useRoute()
+const router = useRouter()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 const pageTitle = computed(() => {
   const titles = {
@@ -76,9 +80,9 @@ const toggleNotifications = () => {
   appStore.toggleNotifications()
 }
 
-const logout = () => {
-  // Handle logout logic here
-  console.log('Logout clicked')
+const logout = async () => {
+  await authStore.logout()
+  router.push('/login')
 }
 </script>
 

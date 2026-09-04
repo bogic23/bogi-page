@@ -1,5 +1,9 @@
+import { toDate } from './dateUtils'
+import { formatDistanceToNow } from 'date-fns'
+
 export function formatDate(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return ''
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -8,7 +12,8 @@ export function formatDate(dateString) {
 }
 
 export function formatDateTime(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return ''
   return date.toLocaleDateString('en-US', {
     year: 'numeric',
     month: 'short',
@@ -19,7 +24,8 @@ export function formatDateTime(dateString) {
 }
 
 export function formatEventTime(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return ''
   return date.toLocaleTimeString('en-US', {
     hour: '2-digit',
     minute: '2-digit'
@@ -27,7 +33,8 @@ export function formatEventTime(dateString) {
 }
 
 export function formatDueDate(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return ''
   const now = new Date()
   const tomorrow = new Date(now)
   tomorrow.setDate(tomorrow.getDate() + 1)
@@ -42,13 +49,15 @@ export function formatDueDate(dateString) {
 }
 
 export function isOverdue(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return false
   const now = new Date()
   return date < now
 }
 
 export function getRelativeTime(dateString) {
-  const date = new Date(dateString)
+  const date = toDate(dateString)
+  if (!date) return ''
   const now = new Date()
   const diffInSeconds = Math.floor((now - date) / 1000)
   
@@ -66,4 +75,10 @@ export function getRelativeTime(dateString) {
   } else {
     return formatDate(dateString)
   }
+}
+
+export function formatRelativeTime(dateString) {
+  const date = toDate(dateString)
+  if (!date) return ''
+  return formatDistanceToNow(date, { addSuffix: true })
 }

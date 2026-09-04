@@ -13,13 +13,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/firebase'
 import { useAuthStore } from './authStore'
+import { toDate } from '@/utils/dateUtils'
 
 export const useNoteStore = defineStore('notes', () => {
   // State
   const notes = ref([])
   const loading = ref(false)
   const error = ref(null)
-  const unsubscribe = ref(null)
+  let unsubscribe = null
   const filters = ref({
     search: '',
     category: 'all',
@@ -30,21 +31,24 @@ export const useNoteStore = defineStore('notes', () => {
   // Initialize listener
   const initListener = () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || unsubscribe.value) {
+    if (!authStore.isAuthenticated || unsubscribe) {
       loading.value = false
       return
     }
 
     loading.value = true
-    const userId = authStore.user.value?.uid
-    if (!userId) return
+    const userId = authStore.user?.uid
+    if (!userId) {
+      loading.value = false
+      return
+    }
 
     const notesQuery = query(
       collection(db, 'users', userId, 'notes'),
       orderBy('updatedAt', 'desc')
     )
 
-    unsubscribe.value = onSnapshot(notesQuery, (snapshot) => {
+    unsubscribe = onSnapshot(notesQuery, (snapshot) => {
       notes.value = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -58,18 +62,18 @@ export const useNoteStore = defineStore('notes', () => {
 
   // Watch for auth changes and auto-initialize
   watch(() => useAuthStore().isAuthenticated, (isAuthenticated) => {
-    if (isAuthenticated && !unsubscribe.value) {
+    if (isAuthenticated && !unsubscribe) {
       initListener()
     } else if (!isAuthenticated) {
       cleanupListener()
     }
-  })
+  }, { immediate: true })
 
   // Cleanup listener
   const cleanupListener = () => {
-    if (unsubscribe.value) {
-      unsubscribe.value()
-      unsubscribe.value = null
+    if (unsubscribe) {
+      unsubscribe()
+      unsubscribe = null
     }
     notes.value = []
   }
@@ -81,7 +85,7 @@ export const useNoteStore = defineStore('notes', () => {
 
   const recentNotes = computed(() => {
     return [...notes.value]
-      .sort((a, b) => new Date(b.updatedAt) - new Date(a.updatedAt))
+      .sort((a, b) => toDate(b.updatedAt)?.getTime() - toDate(a.updatedAt)?.getTime())
       .slice(0, 5)
   })
 
@@ -105,8 +109,8 @@ export const useNoteStore = defineStore('notes', () => {
     if (filters.value.search) {
       const searchLower = filters.value.search.toLowerCase()
       filtered = filtered.filter(note =>
-        note.title.toLowerCase().includes(searchLower) ||
-        note.content.toLowerCase().includes(searchLower) ||
+        note.title?.toLowerCase().includes(searchLower) ||
+        note.content?.toLowerCase().includes(searchLower) ||
         note.tags?.some(tag => tag.toLowerCase().includes(searchLower))
       )
     }
@@ -125,14 +129,20 @@ export const useNoteStore = defineStore('notes', () => {
     const sortBy = filters.value.sortBy
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'updatedAt':
-          return new Date(b.updatedAt) - new Date(a.updatedAt)
-        case 'createdAt':
-          return new Date(b.createdAt) - new Date(a.createdAt)
+        case 'updatedAt': {
+          const aDate = toDate(a.updatedAt)?.getTime() || 0
+          const bDate = toDate(b.updatedAt)?.getTime() || 0
+          return bDate - aDate
+        }
+        case 'createdAt': {
+          const aDate = toDate(a.createdAt)?.getTime() || 0
+          const bDate = toDate(b.createdAt)?.getTime() || 0
+          return bDate - aDate
+        }
         case 'title':
-          return a.title.localeCompare(b.title)
+          return (a.title || '').localeCompare(b.title || '')
         case 'category':
-          return a.category.localeCompare(b.category)
+          return (a.category || '').localeCompare(b.category || '')
         default:
           return 0
       }
@@ -144,19 +154,20 @@ export const useNoteStore = defineStore('notes', () => {
   // Actions
   const addNote = async (note) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
       const newNote = {
         ...note,
-        pinned: false,
+        pinned: note.pinned || false,
         tags: note.tags || [],
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
@@ -172,13 +183,14 @@ export const useNoteStore = defineStore('notes', () => {
 
   const updateNote = async (id, updates) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -194,13 +206,14 @@ export const useNoteStore = defineStore('notes', () => {
 
   const deleteNote = async (id) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -213,12 +226,13 @@ export const useNoteStore = defineStore('notes', () => {
 
   const togglePin = async (id) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
+
     const note = notes.value.find(n => n.id === id)
     if (note) {
       await updateNote(id, { pinned: !note.pinned })

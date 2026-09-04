@@ -13,13 +13,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/firebase'
 import { useAuthStore } from './authStore'
+import { toDate } from '@/utils/dateUtils'
 
 export const useCalendarStore = defineStore('calendar', () => {
   // State
   const events = ref([])
   const loading = ref(false)
   const error = ref(null)
-  const unsubscribe = ref(null)
+  let unsubscribe = null
   const currentDate = ref(new Date())
   const selectedDate = ref(new Date())
   const viewMode = ref('month') // 'month', 'week', 'day'
@@ -27,21 +28,24 @@ export const useCalendarStore = defineStore('calendar', () => {
   // Initialize listener
   const initListener = () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || unsubscribe.value) {
+    if (!authStore.isAuthenticated || unsubscribe) {
       loading.value = false
       return
     }
 
     loading.value = true
-    const userId = authStore.user.value?.uid
-    if (!userId) return
+    const userId = authStore.user?.uid
+    if (!userId) {
+      loading.value = false
+      return
+    }
 
     const eventsQuery = query(
       collection(db, 'users', userId, 'events'),
       orderBy('start', 'asc')
     )
 
-    unsubscribe.value = onSnapshot(eventsQuery, (snapshot) => {
+    unsubscribe = onSnapshot(eventsQuery, (snapshot) => {
       events.value = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -55,18 +59,18 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   // Watch for auth changes and auto-initialize
   watch(() => useAuthStore().isAuthenticated, (isAuthenticated) => {
-    if (isAuthenticated && !unsubscribe.value) {
+    if (isAuthenticated && !unsubscribe) {
       initListener()
     } else if (!isAuthenticated) {
       cleanupListener()
     }
-  })
+  }, { immediate: true })
 
   // Cleanup listener
   const cleanupListener = () => {
-    if (unsubscribe.value) {
-      unsubscribe.value()
-      unsubscribe.value = null
+    if (unsubscribe) {
+      unsubscribe()
+      unsubscribe = null
     }
     events.value = []
   }
@@ -75,16 +79,16 @@ export const useCalendarStore = defineStore('calendar', () => {
   const upcomingEvents = computed(() => {
     const now = new Date()
     return events.value
-      .filter(event => new Date(event.start) >= now)
-      .sort((a, b) => new Date(a.start) - new Date(b.start))
+      .filter(event => toDate(event.start)?.getTime() >= now.getTime())
+      .sort((a, b) => toDate(a.start)?.getTime() - toDate(b.start)?.getTime())
       .slice(0, 5)
   })
 
   const eventsForSelectedDate = computed(() => {
     const selected = selectedDate.value
     return events.value.filter(event => {
-      const eventDate = new Date(event.start)
-      return eventDate.toDateString() === selected.toDateString()
+      const eventDate = toDate(event.start)
+      return eventDate?.toDateString() === selected.toDateString()
     })
   })
 
@@ -92,21 +96,22 @@ export const useCalendarStore = defineStore('calendar', () => {
     const year = currentDate.value.getFullYear()
     const month = currentDate.value.getMonth()
     return events.value.filter(event => {
-      const eventDate = new Date(event.start)
-      return eventDate.getFullYear() === year && eventDate.getMonth() === month
+      const eventDate = toDate(event.start)
+      return eventDate?.getFullYear() === year && eventDate?.getMonth() === month
     })
   })
 
   // Actions
   const addEvent = async (event) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -126,13 +131,14 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const updateEvent = async (id, updates) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -148,13 +154,14 @@ export const useCalendarStore = defineStore('calendar', () => {
 
   const deleteEvent = async (id) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {

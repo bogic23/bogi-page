@@ -13,13 +13,14 @@ import {
 } from 'firebase/firestore'
 import { db } from '@/firebase/firebase'
 import { useAuthStore } from './authStore'
+import { toDate } from '@/utils/dateUtils'
 
 export const useTaskStore = defineStore('tasks', () => {
   // State
   const tasks = ref([])
   const loading = ref(false)
   const error = ref(null)
-  const unsubscribe = ref(null)
+  let unsubscribe = null
   const filters = ref({
     search: '',
     status: 'all',
@@ -31,21 +32,24 @@ export const useTaskStore = defineStore('tasks', () => {
   // Initialize listener
   const initListener = () => {
     const authStore = useAuthStore()
-    if (!authStore.isAuthenticated || unsubscribe.value) {
+    if (!authStore.isAuthenticated || unsubscribe) {
       loading.value = false
       return
     }
 
     loading.value = true
-    const userId = authStore.user.value?.uid
-    if (!userId) return
+    const userId = authStore.user?.uid
+    if (!userId) {
+      loading.value = false
+      return
+    }
 
     const tasksQuery = query(
       collection(db, 'users', userId, 'tasks'),
       orderBy('createdAt', 'desc')
     )
 
-    unsubscribe.value = onSnapshot(tasksQuery, (snapshot) => {
+    unsubscribe = onSnapshot(tasksQuery, (snapshot) => {
       tasks.value = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -59,18 +63,18 @@ export const useTaskStore = defineStore('tasks', () => {
 
   // Watch for auth changes and auto-initialize
   watch(() => useAuthStore().isAuthenticated, (isAuthenticated) => {
-    if (isAuthenticated && !unsubscribe.value) {
+    if (isAuthenticated && !unsubscribe) {
       initListener()
     } else if (!isAuthenticated) {
       cleanupListener()
     }
-  })
+  }, { immediate: true })
 
   // Cleanup listener
   const cleanupListener = () => {
-    if (unsubscribe.value) {
-      unsubscribe.value()
-      unsubscribe.value = null
+    if (unsubscribe) {
+      unsubscribe()
+      unsubscribe = null
     }
     tasks.value = []
   }
@@ -86,7 +90,7 @@ export const useTaskStore = defineStore('tasks', () => {
     if (filters.value.search) {
       const searchLower = filters.value.search.toLowerCase()
       filtered = filtered.filter(task =>
-        task.title.toLowerCase().includes(searchLower) ||
+        task.title?.toLowerCase().includes(searchLower) ||
         task.description?.toLowerCase().includes(searchLower)
       )
     }
@@ -113,14 +117,20 @@ export const useTaskStore = defineStore('tasks', () => {
     const priorityOrder = { high: 0, medium: 1, low: 2 }
     filtered.sort((a, b) => {
       switch (sortBy) {
-        case 'dueDate':
-          return new Date(a.dueDate || 0) - new Date(b.dueDate || 0)
+        case 'dueDate': {
+          const aDate = toDate(a.dueDate)?.getTime() || 0
+          const bDate = toDate(b.dueDate)?.getTime() || 0
+          return aDate - bDate
+        }
         case 'priority':
           return priorityOrder[a.priority] - priorityOrder[b.priority]
         case 'title':
-          return a.title.localeCompare(b.title)
-        case 'createdAt':
-          return new Date(b.createdAt) - new Date(a.createdAt)
+          return (a.title || '').localeCompare(b.title || '')
+        case 'createdAt': {
+          const aDate = toDate(a.createdAt)?.getTime() || 0
+          const bDate = toDate(b.createdAt)?.getTime() || 0
+          return bDate - aDate
+        }
         default:
           return 0
       }
@@ -137,13 +147,14 @@ export const useTaskStore = defineStore('tasks', () => {
   // Actions
   const addTask = async (task) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -164,13 +175,14 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const updateTask = async (id, updates) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -186,13 +198,14 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const deleteTask = async (id) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
-    const userId = authStore.user.value?.uid
+
+    const userId = authStore.user?.uid
     if (!userId) throw new Error('Not authenticated')
 
     try {
@@ -205,12 +218,13 @@ export const useTaskStore = defineStore('tasks', () => {
 
   const toggleTaskComplete = async (id) => {
     const authStore = useAuthStore()
-    
+    error.value = null
+
     // Wait for auth to be ready if still loading
     if (authStore.loading) {
       await authStore.initAuth()
     }
-    
+
     const task = tasks.value.find(t => t.id === id)
     if (task) {
       await updateTask(id, {

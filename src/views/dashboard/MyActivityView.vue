@@ -542,50 +542,24 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { useTaskStore } from '@/stores/taskStore'
 import { useNoteStore } from '@/stores/noteStore'
 import { useCalendarStore } from '@/stores/calendarStore'
 import { format, formatDistanceToNow } from 'date-fns'
+import { toDate } from '@/utils/dateUtils'
 import AppModal from '@/components/common/AppModal.vue'
-import { useAuthStore } from '@/stores/authStore'
 
 const taskStore = useTaskStore()
 const noteStore = useNoteStore()
 const calendarStore = useCalendarStore()
-const authStore = useAuthStore()
-
-// Initialize listeners
-onMounted(async () => {
-  // Wait for auth to be initialized
-  if (authStore.loading) {
-    await new Promise(resolve => {
-      const unwatch = watch(() => authStore.loading, (loading) => {
-        if (!loading) {
-          unwatch()
-          resolve()
-        }
-      })
-    })
-  }
-  
-  taskStore.initListener()
-  noteStore.initListener()
-  calendarStore.initListener()
-})
-
-onUnmounted(() => {
-  taskStore.cleanupListener()
-  noteStore.cleanupListener()
-  calendarStore.cleanupListener()
-})
 
 // Computed
 const upcomingEvents = computed(() => {
   const now = new Date()
   return calendarStore.events
-    .filter(event => new Date(event.start) >= now)
-    .sort((a, b) => new Date(a.start) - new Date(b.start))
+    .filter(event => toDate(event.start)?.getTime() >= now.getTime())
+    .sort((a, b) => toDate(a.start)?.getTime() - toDate(b.start)?.getTime())
 })
 
 // Task Modal State
@@ -642,12 +616,14 @@ const deleting = ref(false)
 // Formatters
 const formatDate = (dateStr) => {
   if (!dateStr) return ''
-  const date = dateStr.toDate ? dateStr.toDate() : new Date(dateStr)
+  const date = toDate(dateStr)
+  if (!date) return ''
   return format(date, 'MMM d, yyyy')
 }
 
 const formatEventDate = (dateStr) => {
-  const date = dateStr.toDate ? dateStr.toDate() : new Date(dateStr)
+  const date = toDate(dateStr)
+  if (!date) return ''
   const today = new Date()
   const tomorrow = new Date(today)
   tomorrow.setDate(tomorrow.getDate() + 1)
@@ -659,13 +635,15 @@ const formatEventDate = (dateStr) => {
 
 const formatEventTime = (dateStr) => {
   if (!dateStr) return ''
-  const date = dateStr.toDate ? dateStr.toDate() : new Date(dateStr)
+  const date = toDate(dateStr)
+  if (!date) return ''
   return format(date, 'h:mm a')
 }
 
 const formatRelativeTime = (date) => {
   if (!date) return ''
-  const d = date.toDate ? date.toDate() : new Date(date)
+  const d = toDate(date)
+  if (!d) return ''
   return formatDistanceToNow(d, { addSuffix: true })
 }
 

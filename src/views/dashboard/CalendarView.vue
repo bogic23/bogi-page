@@ -139,6 +139,7 @@ import AppModal from '../../components/common/AppModal.vue'
 import CalendarGrid from '../../components/calendar/CalendarGrid.vue'
 import EventList from '../../components/calendar/EventList.vue'
 import EventForm from '../../components/calendar/EventForm.vue'
+import { toDate } from '@/utils/dateUtils'
 import { formatEventTime } from '../../utils/date'
 
 const route = useRoute()
@@ -165,11 +166,11 @@ const handleDateSelect = (date) => {
 }
 
 const getEventDay = (dateString) => {
-  return new Date(dateString).getDate()
+  return toDate(dateString)?.getDate()
 }
 
 const getEventMonth = (dateString) => {
-  return new Date(dateString).toLocaleDateString('en-US', { month: 'short' })
+  return toDate(dateString)?.toLocaleDateString('en-US', { month: 'short' })
 }
 
 const openCreateModal = () => {
