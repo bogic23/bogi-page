@@ -35,6 +35,11 @@
               <a class="nav-link" href="#contact" @click.prevent="smoothScrollTo('#contact')">Contact</a>
             </li>
             <li class="nav-item">
+              <router-link class="nav-link" to="/qr-generator">
+                QR Generator
+              </router-link>
+            </li>
+            <li class="nav-item">
               <router-link class="btn btn-primary ms-2" to="/dashboard">
                 <i class="bi bi-speedometer2 me-1" />
                 Dashboard

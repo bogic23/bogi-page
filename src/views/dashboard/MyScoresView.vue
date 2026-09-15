@@ -410,7 +410,7 @@
         <div class="mt-4">
           <label class="form-label">License Preview</label>
           <div class="license-preview">
-            <pre v-html="licensePreview"></pre>
+            <pre v-html="licensePreview" />
           </div>
         </div>
       </div>
@@ -421,16 +421,16 @@
         <AppButton 
           variant="outline-secondary"
           icon="clipboard"
-          @click="copyLicense"
           :disabled="!isLicenseValid"
+          @click="copyLicense"
         >
           Copy License
         </AppButton>
         <AppButton 
           variant="primary" 
           icon="download"
-          @click="downloadLicense"
           :disabled="!isLicenseValid"
+          @click="downloadLicense"
         >
           Download as Text
         </AppButton>

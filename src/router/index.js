@@ -27,6 +27,11 @@ const router = createRouter({
           path: '',
           name: 'portfolio',
           component: () => import('../views/portfolio/PortfolioView.vue')
+        },
+        {
+          path: 'qr-generator',
+          name: 'qr-generator',
+          component: () => import('../views/portfolio/QRCodeGeneratorView.vue')
         }
       ]
     },
