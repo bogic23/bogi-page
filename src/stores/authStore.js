@@ -19,12 +19,14 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref(null)
 
   const isAuthenticated = computed(() => !!user.value)
+  const isAdmin = computed(() => user.value?.role === 'admin')
 
   const initAuth = () => {
     return new Promise((resolve) => {
       onAuthStateChanged(auth, async (currentUser) => {
         if (currentUser) {
           user.value = currentUser
+          await ensureUserDoc(currentUser)
           await fetchUserData(currentUser.uid)
         } else {
           user.value = null
@@ -39,7 +41,13 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const userDoc = await getDoc(doc(db, 'users', uid))
       if (userDoc.exists()) {
-        user.value = { ...(user.value || {}), ...userDoc.data(), uid }
+        const userData = userDoc.data()
+        user.value = { 
+          ...(user.value || {}), 
+          ...userData, 
+          uid,
+          role: userData.role || 'user'
+        }
       }
     } catch (err) {
       console.error('Error fetching user data:', err)
@@ -56,6 +64,7 @@ export const useAuthStore = defineStore('auth', () => {
       await setDoc(doc(db, 'users', userCredential.user.uid), {
         email,
         displayName,
+        role: 'user',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       })
@@ -76,6 +85,7 @@ export const useAuthStore = defineStore('auth', () => {
     try {
       const userCredential = await signInWithEmailAndPassword(auth, email, password)
       user.value = userCredential.user
+      await ensureUserDoc(userCredential.user)
       await fetchUserData(userCredential.user.uid)
       return { success: true }
     } catch (err) {
@@ -95,6 +105,7 @@ export const useAuthStore = defineStore('auth', () => {
       provider.addScope('email')
       const userCredential = await signInWithPopup(auth, provider)
       user.value = userCredential.user
+      await ensureUserDoc(userCredential.user)
       await fetchUserData(userCredential.user.uid)
       return { success: true }
     } catch (err) {
@@ -102,6 +113,20 @@ export const useAuthStore = defineStore('auth', () => {
       return { success: false, error: err.message }
     } finally {
       loading.value = false
+    }
+  }
+
+  const ensureUserDoc = async (firebaseUser) => {
+    const userRef = doc(db, 'users', firebaseUser.uid)
+    const userDoc = await getDoc(userRef)
+    if (!userDoc.exists()) {
+      await setDoc(userRef, {
+        email: firebaseUser.email,
+        displayName: firebaseUser.displayName || '',
+        role: 'user',
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      })
     }
   }
 
@@ -142,6 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
     loading,
     error,
     isAuthenticated,
+    isAdmin,
     initAuth,
     register,
     login,

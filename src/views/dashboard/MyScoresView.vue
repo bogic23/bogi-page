@@ -8,10 +8,11 @@
           My Scores
         </h2>
         <p class="text-muted mb-0">
-          Upload and manage your sheet music collection
+          Browse and manage sheet music collection
         </p>
       </div>
       <AppButton 
+        v-if="authStore.isAdmin"
         variant="primary" 
         icon="cloud-upload" 
         :loading="scoreStore.uploading"
@@ -20,61 +21,6 @@
       >
         Upload Score
       </AppButton>
-    </div>
-
-    <!-- Stats -->
-    <div class="row g-3 mb-4">
-      <div class="col-md-4">
-        <AppCard variant="info" hover>
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-primary bg-opacity-10 text-primary">
-              <i class="bi bi-file-earmark-music fs-4" />
-            </div>
-            <div class="ms-3">
-              <div class="stat-value fw-bold fs-4">
-                {{ scoreStore.totalScores }}
-              </div>
-              <div class="text-muted small">
-                Total Scores
-              </div>
-            </div>
-          </div>
-        </AppCard>
-      </div>
-      <div class="col-md-4">
-        <AppCard variant="success" hover>
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-success bg-opacity-10 text-success">
-              <i class="bi bi-hdd fs-4" />
-            </div>
-            <div class="ms-3">
-              <div class="stat-value fw-bold fs-4">
-                {{ scoreStore.totalSize }}
-              </div>
-              <div class="text-muted small">
-                Total Size
-              </div>
-            </div>
-          </div>
-        </AppCard>
-      </div>
-      <div class="col-md-4">
-        <AppCard variant="warning" hover>
-          <div class="d-flex align-items-center">
-            <div class="stat-icon bg-warning bg-opacity-10 text-warning">
-              <i class="bi bi-cloud fs-4" />
-            </div>
-            <div class="ms-3">
-              <div class="stat-value fw-bold fs-4">
-                {{ scoreStore.isReady ? 'Connected' : 'Not Connected' }}
-              </div>
-              <div class="text-muted small">
-                Google Drive
-              </div>
-            </div>
-          </div>
-        </AppCard>
-      </div>
     </div>
 
     <!-- Search & Filters -->
@@ -94,10 +40,10 @@
         </div>
         <div class="col-md-3">
           <select v-model="filters.sortBy" class="form-select" @change="applyFilters">
-            <option value="createdTime">
+            <option value="publishedDate">
               Newest First
             </option>
-            <option value="-createdTime">
+            <option value="-publishedDate">
               Oldest First
             </option>
             <option value="name">
@@ -105,12 +51,6 @@
             </option>
             <option value="-name">
               Name Z-A
-            </option>
-            <option value="size">
-              Size: Small to Large
-            </option>
-            <option value="-size">
-              Size: Large to Small
             </option>
           </select>
         </div>
@@ -128,17 +68,93 @@
       </div>
     </AppCard>
 
-    <!-- Scores Grid -->
-    <div v-if="filteredScores.length" class="row">
-      <div v-for="score in filteredScores" :key="score.id" class="col-md-6 col-lg-4 col-xl-3 mb-4">
-        <ScoreCard 
-          :score="score"
-          @view="handleViewScore"
-          @download="handleDownloadScore"
-          @delete="handleDeleteScore"
-        />
+    <!-- Scores Table -->
+    <AppCard v-if="filteredScores.length">
+      <div class="table-responsive">
+        <table class="table table-hover align-middle mb-0">
+          <thead class="table-light">
+            <tr>
+              <th style="width: 40%;">
+                Title
+              </th>
+              <th style="width: 20%;">
+                Published Date
+              </th>
+              <th style="width: 25%;">
+                Notes
+              </th>
+              <th style="width: 15%;" class="text-end">
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="score in filteredScores" :key="score.id">
+              <td>
+                <div class="d-flex align-items-center">
+                  <i class="bi bi-file-earmark-music text-primary me-2 fs-5" />
+                  <div>
+                    <div class="fw-medium">
+                      {{ score.name }}
+                    </div>
+                    <div class="text-muted small">
+                      {{ formatFileSize(score.size) }}
+                    </div>
+                  </div>
+                </div>
+              </td>
+              <td>
+                {{ score.publishedDate ? formatPublishedDate(score.publishedDate) : '—' }}
+              </td>
+              <td>
+                <span
+                  v-if="score.notes"
+                  class="text-muted"
+                  style="max-width: 200px;"
+                  title="{{ score.notes }}"
+                >
+                  {{ score.notes }}
+                </span>
+                <span v-else class="text-muted fst-italic">—</span>
+              </td>
+              <td class="text-end">
+                <div class="btn-group btn-group-sm">
+                  <AppButton 
+                    size="sm" 
+                    variant="outline-primary" 
+                    icon="eye" 
+                    title="View"
+                    @click="handleViewScore(score)"
+                  />
+                  <AppButton 
+                    size="sm" 
+                    variant="outline-secondary" 
+                    icon="download" 
+                    title="Download"
+                    @click="handleDownloadScore(score)"
+                  />
+                  <AppButton 
+                    size="sm" 
+                    variant="outline-success" 
+                    icon="file-text" 
+                    title="Create License"
+                    @click="openLicenseModal(score)"
+                  />
+                  <AppButton 
+                    v-if="authStore.isAdmin"
+                    size="sm" 
+                    variant="outline-danger" 
+                    icon="trash" 
+                    title="Delete"
+                    @click="handleDeleteScore(score)"
+                  />
+                </div>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
-    </div>
+    </AppCard>
 
     <!-- Empty State -->
     <AppCard v-else>
@@ -148,10 +164,10 @@
           {{ filters.search ? 'No scores found' : 'No scores yet' }}
         </h5>
         <p class="text-muted">
-          {{ filters.search ? 'Try adjusting your search' : 'Upload your first sheet music PDF to get started' }}
+          {{ filters.search ? 'Try adjusting your search' : 'Scores will appear here once uploaded' }}
         </p>
         <AppButton 
-          v-if="!filters.search"
+          v-if="!filters.search && authStore.isAdmin"
           variant="primary" 
           icon="cloud-upload" 
           :disabled="!scoreStore.isReady"
@@ -231,6 +247,28 @@
           />
         </div>
 
+        <div v-if="selectedFile" class="mt-3">
+          <label class="form-label">Published Date <span class="text-danger">*</span></label>
+          <input 
+            v-model="uploadPublishedDate" 
+            type="date" 
+            class="form-control" 
+            :disabled="scoreStore.uploading"
+            required
+          >
+        </div>
+
+        <div v-if="selectedFile" class="mt-3">
+          <label class="form-label">Notes (optional)</label>
+          <textarea 
+            v-model="uploadNotes" 
+            class="form-control" 
+            rows="3" 
+            placeholder="Add notes about this score..."
+            :disabled="scoreStore.uploading"
+          />
+        </div>
+
         <div v-if="scoreStore.uploadProgress > 0 && scoreStore.uploadProgress < 100" class="mt-3">
           <div class="d-flex justify-content-between mb-1">
             <span class="small">Uploading...</span>
@@ -290,28 +328,160 @@
         </AppButton>
       </template>
     </AppModal>
+
+    <!-- Create License Modal -->
+    <AppModal 
+      v-model="showLicenseModal" 
+      title="Create Arrangement License" 
+      size="lg"
+    >
+      <div class="license-form">
+        <div class="row g-3">
+          <div class="col-md-6">
+            <label class="form-label">Arranger Name <span class="text-danger">*</span></label>
+            <input 
+              v-model="licenseForm.arrangerName" 
+              type="text" 
+              class="form-control" 
+              placeholder="Enter arranger full name"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Arranger Role</label>
+            <input 
+              v-model="licenseForm.arrangerRole" 
+              type="text" 
+              class="form-control" 
+              placeholder="e.g., Arranger, Composer"
+              value="Arranger"
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Arrangement Title <span class="text-danger">*</span></label>
+            <input 
+              v-model="licenseForm.arrangementTitle" 
+              type="text" 
+              class="form-control" 
+              placeholder="Enter arrangement title"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Permission Granted To <span class="text-danger">*</span></label>
+            <input 
+              v-model="licenseForm.granteeName" 
+              type="text" 
+              class="form-control" 
+              placeholder="Enter name of person receiving permission"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Issued At (City) <span class="text-danger">*</span></label>
+            <input 
+              v-model="licenseForm.issuedAt" 
+              type="text" 
+              class="form-control" 
+              placeholder="e.g., Jakarta"
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Date <span class="text-danger">*</span></label>
+            <input 
+              v-model="licenseForm.date" 
+              type="date" 
+              class="form-control" 
+              required
+            >
+          </div>
+          <div class="col-md-6">
+            <label class="form-label">Arranger Email</label>
+            <input 
+              v-model="licenseForm.arrangerEmail" 
+              type="email" 
+              class="form-control" 
+              placeholder="arranger@example.com"
+            >
+          </div>
+        </div>
+
+        <div class="mt-4">
+          <label class="form-label">License Preview</label>
+          <div class="license-preview">
+            <pre v-html="licensePreview"></pre>
+          </div>
+        </div>
+      </div>
+      <template #footer>
+        <AppButton variant="secondary" @click="closeLicenseModal">
+          Cancel
+        </AppButton>
+        <AppButton 
+          variant="outline-secondary"
+          icon="clipboard"
+          @click="copyLicense"
+          :disabled="!isLicenseValid"
+        >
+          Copy License
+        </AppButton>
+        <AppButton 
+          variant="primary" 
+          icon="download"
+          @click="downloadLicense"
+          :disabled="!isLicenseValid"
+        >
+          Download as Text
+        </AppButton>
+      </template>
+    </AppModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { jsPDF } from 'jspdf'
 import { useScoreStore } from '@/stores/scoreStore'
+import { useAuthStore } from '@/stores/authStore'
 import { useAppStore } from '@/stores/appStore'
+import { formatDate, formatFileSize } from '@/utils/dateUtils'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppModal from '@/components/common/AppModal.vue'
 
 const scoreStore = useScoreStore()
+const authStore = useAuthStore()
 const appStore = useAppStore()
+
+const formatPublishedDate = (date) => {
+  if (!date) return '—'
+  const d = date.toDate ? date.toDate() : new Date(date)
+  return formatDate(d)
+}
 
 const showUploadModal = ref(false)
 const showDeleteModal = ref(false)
+const showLicenseModal = ref(false)
 const selectedFile = ref(null)
 const scoreToDelete = ref(null)
+const scoreForLicense = ref(null)
 const uploadTitle = ref('')
 const uploadDescription = ref('')
+const uploadPublishedDate = ref('')
+const uploadNotes = ref('')
 const isDragover = ref(false)
 const fileInput = ref(null)
+
+const licenseForm = ref({
+  arrangerName: '',
+  arrangerRole: 'Arranger',
+  arrangementTitle: '',
+  granteeName: '',
+  issuedAt: 'Jakarta',
+  date: new Date().toISOString().split('T')[0],
+  arrangerEmail: ''
+})
 
 const filters = ref({
   search: '',
@@ -319,12 +489,13 @@ const filters = ref({
 })
 
 const filteredScores = computed(() => {
-  let filtered = [...scoreStore.sortedScores]
+  let filtered = [...scoreStore.scores]
 
   if (filters.value.search) {
     const searchLower = filters.value.search.toLowerCase()
     filtered = filtered.filter(score =>
-      score.name.toLowerCase().includes(searchLower)
+      score.name.toLowerCase().includes(searchLower) ||
+      (score.notes && score.notes.toLowerCase().includes(searchLower))
     )
   }
 
@@ -336,15 +507,14 @@ const filteredScores = computed(() => {
     let aVal = a[field]
     let bVal = b[field]
 
-    if (field === 'size') {
-      aVal = parseInt(a.size) || 0
-      bVal = parseInt(b.size) || 0
-    } else if (field === 'createdTime' || field === 'modifiedTime') {
-      aVal = new Date(aVal).getTime()
-      bVal = new Date(bVal).getTime()
+    if (field === 'publishedDate') {
+      const aDate = aVal?.toDate ? aVal.toDate() : new Date(aVal)
+      const bDate = bVal?.toDate ? bVal.toDate() : new Date(bVal)
+      aVal = aDate.getTime()
+      bVal = bDate.getTime()
     } else if (field === 'name') {
-      aVal = aVal.toLowerCase()
-      bVal = bVal.toLowerCase()
+      aVal = (aVal || '').toLowerCase()
+      bVal = (bVal || '').toLowerCase()
     }
 
     if (aVal < bVal) return isDesc ? 1 : -1
@@ -383,6 +553,8 @@ const openUploadModal = () => {
   selectedFile.value = null
   uploadTitle.value = ''
   uploadDescription.value = ''
+  uploadPublishedDate.value = new Date().toISOString().split('T')[0]
+  uploadNotes.value = ''
   showUploadModal.value = true
 }
 
@@ -391,6 +563,8 @@ const closeUploadModal = () => {
   selectedFile.value = null
   uploadTitle.value = ''
   uploadDescription.value = ''
+  uploadPublishedDate.value = ''
+  uploadNotes.value = ''
   scoreStore.clearError()
 }
 
@@ -456,7 +630,9 @@ const handleUpload = async () => {
   try {
     await scoreStore.uploadScore(selectedFile.value, {
       name: uploadTitle.value || selectedFile.value.name,
-      description: uploadDescription.value
+      description: uploadDescription.value,
+      publishedDate: uploadPublishedDate.value,
+      notes: uploadNotes.value
     })
     appStore.addNotification({
       title: 'Upload Complete',
@@ -508,6 +684,149 @@ const confirmDelete = async () => {
       type: 'error'
     })
   }
+}
+
+const openLicenseModal = (score) => {
+  scoreForLicense.value = score
+  licenseForm.value = {
+    arrangerName: '',
+    arrangerRole: 'Arranger',
+    arrangementTitle: score.name,
+    granteeName: '',
+    issuedAt: 'Jakarta',
+    date: new Date().toISOString().split('T')[0],
+    arrangerEmail: ''
+  }
+  showLicenseModal.value = true
+}
+
+const closeLicenseModal = () => {
+  showLicenseModal.value = false
+  scoreForLicense.value = null
+  licenseForm.value = {
+    arrangerName: '',
+    arrangerRole: 'Arranger',
+    arrangementTitle: '',
+    granteeName: '',
+    issuedAt: 'Jakarta',
+    date: new Date().toISOString().split('T')[0],
+    arrangerEmail: ''
+  }
+}
+
+const isLicenseValid = computed(() => {
+  return licenseForm.value.arrangerName.trim() &&
+         licenseForm.value.arrangementTitle.trim() &&
+         licenseForm.value.granteeName.trim() &&
+         licenseForm.value.issuedAt.trim() &&
+         licenseForm.value.date
+})
+
+const generateLicenseText = () => {
+  const f = licenseForm.value
+  const dateObj = new Date(f.date)
+  const formattedDate = dateObj.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  }) + ` (${dateObj.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })})`
+
+  const maxLabelWidth = Math.max(
+    'Name: '.length,
+    'Role: '.length,
+    'Title of Arrangement: '.length
+  )
+
+  const padLabel = (label) => label.padEnd(maxLabelWidth)
+
+  return `                    SONG ARRANGEMENT LICENSE LETTER
+
+I, the undersigned:
+${padLabel('Name: ')}${f.arrangerName}
+${padLabel('Role: ')}${f.arrangerRole}
+${padLabel('Title of Arrangement: ')}${f.arrangementTitle}
+
+hereby state that I am the legitimate arranger of the musical arrangement titled "${f.arrangementTitle}".
+Through this letter, I officially grant permission to ${f.granteeName} to
+use, rehearse, perform, and present my arrangement of ${f.arrangementTitle} for artistic, educational, and performance purposes. This
+permission includes usage for concerts, competitions, rehearsals, and
+related non-commercial promotional activities.
+This permission does not transfer ownership of the arrangement. All
+intellectual property rights remain with me as the arranger.
+This letter is made truthfully and may be used as an official written authorization.
+
+Issued at: ${f.issuedAt}
+Date: ${formattedDate}
+
+
+Sincerely, ${f.arrangerName}
+${f.arrangerRole} – ${f.arrangementTitle}${f.arrangerEmail ? `\nEmail: ${f.arrangerEmail}` : ''}`
+}
+
+const licensePreview = computed(() => {
+  const text = generateLicenseText()
+  return text.replace(/\n/g, '<br>')
+})
+
+const copyLicense = () => {
+  const text = generateLicenseText()
+  navigator.clipboard.writeText(text).then(() => {
+    appStore.addNotification({
+      title: 'Copied',
+      message: 'License text copied to clipboard'
+    })
+  }).catch(() => {
+    appStore.addNotification({
+      title: 'Error',
+      message: 'Failed to copy license',
+      type: 'error'
+    })
+  })
+}
+
+const downloadLicense = () => {
+  const text = generateLicenseText()
+  const doc = new jsPDF({
+    orientation: 'portrait',
+    unit: 'mm',
+    format: 'a4'
+  })
+  
+  const pageWidth = 210
+  const pageHeight = 297
+  const marginLeft = 25
+  const marginRight = 25
+  const marginTop = 25
+  const marginBottom = 25
+  const contentWidth = pageWidth - marginLeft - marginRight
+  const lineHeight = 5
+  
+  const lines = text.split('\n')
+  let y = marginTop
+  
+  doc.setFont('courier', 'normal')
+  doc.setFontSize(10)
+  
+  lines.forEach((line) => {
+    const wrappedLines = doc.splitTextToSize(line, contentWidth)
+    
+    wrappedLines.forEach((wrappedLine) => {
+      if (y + lineHeight > pageHeight - marginBottom) {
+        doc.addPage()
+        y = marginTop
+      }
+      doc.text(wrappedLine, marginLeft, y)
+      y += lineHeight
+    })
+  })
+  
+  const fileName = `license-${licenseForm.value.arrangementTitle.replace(/\s+/g, '-')}.pdf`
+  doc.save(fileName)
+  
+  appStore.addNotification({
+    title: 'Downloaded',
+    message: 'License PDF downloaded'
+  })
 }
 
 onMounted(async () => {
@@ -581,5 +900,25 @@ watch(() => scoreStore.isReady, (isReady) => {
   .progress-bar {
     transition-duration: 0.01ms !important;
   }
+}
+
+.license-preview {
+  background: var(--color-background);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  padding: var(--spacing-lg);
+  max-height: 400px;
+  overflow-y: auto;
+  font-family: var(--font-family-mono, monospace);
+  font-size: 0.875rem;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.license-preview pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
 }
 </style>

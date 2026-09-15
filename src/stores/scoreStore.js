@@ -3,13 +3,14 @@ import { ref, computed } from 'vue'
 import { useAuthStore } from './authStore'
 import {
   uploadPdfToDrive,
-  listScoresFromDrive,
   deleteScoreFromDrive,
   initGoogleDrive,
   revokeAccessToken,
   isGoogleDriveReady
 } from '@/services/googleDrive'
 import { formatFileSize, formatDate } from '@/utils/dateUtils'
+import { db } from '@/firebase/firebase'
+import { collection, addDoc, serverTimestamp, query, orderBy, getDocs, deleteDoc, doc } from 'firebase/firestore'
 
 export const useScoreStore = defineStore('scores', () => {
   const scores = ref([])
@@ -18,12 +19,6 @@ export const useScoreStore = defineStore('scores', () => {
   const uploadProgress = ref(0)
   const error = ref(null)
   let initialized = false
-
-  const sortedScores = computed(() => {
-    return [...scores.value].sort((a, b) => 
-      new Date(b.createdTime) - new Date(a.createdTime)
-    )
-  })
 
   const totalScores = computed(() => scores.value.length)
 
@@ -53,23 +48,44 @@ export const useScoreStore = defineStore('scores', () => {
     error.value = null
 
     try {
-      const files = await listScoresFromDrive()
-      scores.value = files.map(file => ({
-        id: file.id,
-        name: file.name,
-        webViewLink: file.webViewLink,
-        webContentLink: file.webContentLink,
-        createdTime: file.createdTime,
-        modifiedTime: file.modifiedTime,
-        size: file.size,
-        formattedSize: formatFileSize(file.size),
-        formattedDate: formatDate(file.createdTime)
+      const firestoreScores = await fetchScoresFromFirestore()
+      
+      const combinedScores = firestoreScores.map(fsScore => ({
+        id: fsScore.driveFileId,
+        name: fsScore.name,
+        webViewLink: fsScore.webViewLink,
+        webContentLink: fsScore.webContentLink,
+        size: fsScore.size || 0,
+        formattedSize: formatFileSize(fsScore.size || 0),
+        formattedDate: formatDate(fsScore.publishedDate?.toDate?.() || fsScore.publishedDate),
+        publishedDate: fsScore.publishedDate,
+        notes: fsScore.notes,
+        firestoreId: fsScore.id
       }))
+
+      scores.value = combinedScores
     } catch (err) {
       error.value = err.message
       throw err
     } finally {
       loading.value = false
+    }
+  }
+
+  const fetchScoresFromFirestore = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return []
+
+    try {
+      const scoresQuery = query(
+        collection(db, 'scores'),
+        orderBy('publishedDate', 'desc')
+      )
+      const snapshot = await getDocs(scoresQuery)
+      return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }))
+    } catch (err) {
+      console.error('Error fetching scores from Firestore:', err)
+      return []
     }
   }
 
@@ -81,6 +97,10 @@ export const useScoreStore = defineStore('scores', () => {
 
     if (!file || file.type !== 'application/pdf') {
       throw new Error('Please select a PDF file')
+    }
+
+    if (!authStore.isAdmin) {
+      throw new Error('Only admin users can upload scores')
     }
 
     uploading.value = true
@@ -107,6 +127,24 @@ export const useScoreStore = defineStore('scores', () => {
         formattedDate: formatDate(result.createdTime)
       }
 
+      const publishedDate = metadata.publishedDate ? new Date(metadata.publishedDate) : new Date()
+      const notes = metadata.notes || ''
+
+      await addDoc(collection(db, 'scores'), {
+        driveFileId: result.id,
+        name: metadata.name || file.name,
+        publishedDate: publishedDate,
+        notes: notes,
+        webViewLink: result.webViewLink,
+        webContentLink: result.webContentLink,
+        size: result.size,
+        createdAt: serverTimestamp(),
+        createdBy: authStore.user.uid
+      })
+
+      newScore.publishedDate = publishedDate
+      newScore.notes = notes
+
       scores.value.unshift(newScore)
       return newScore
     } catch (err) {
@@ -124,11 +162,22 @@ export const useScoreStore = defineStore('scores', () => {
       throw new Error('Not authenticated')
     }
 
+    if (!authStore.isAdmin) {
+      throw new Error('Only admin users can delete scores')
+    }
+
     loading.value = true
     error.value = null
 
     try {
+      const scoreToDelete = scores.value.find(s => s.id === scoreId)
+      
       await deleteScoreFromDrive(scoreId)
+      
+      if (scoreToDelete?.firestoreId) {
+        await deleteDoc(doc(db, 'scores', scoreToDelete.firestoreId))
+      }
+      
       scores.value = scores.value.filter(s => s.id !== scoreId)
     } catch (err) {
       error.value = err.message
@@ -171,7 +220,6 @@ export const useScoreStore = defineStore('scores', () => {
     uploading,
     uploadProgress,
     error,
-    sortedScores,
     totalScores,
     totalSize,
     initialize,

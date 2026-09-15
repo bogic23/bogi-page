@@ -15,8 +15,12 @@
         </span>
         <span class="score-date">
           <i class="bi bi-calendar me-1" />
-          {{ score.formattedDate }}
+          {{ score.publishedDate ? formatPublishedDate(score.publishedDate) : score.formattedDate }}
         </span>
+      </div>
+      <div v-if="score.notes" class="score-notes">
+        <i class="bi bi-card-text me-1" />
+        {{ score.notes }}
       </div>
     </div>
 
@@ -51,6 +55,7 @@
 
 <script setup>
 import { defineProps, defineEmits } from 'vue'
+import { formatDate } from '@/utils/dateUtils'
 import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 
@@ -62,6 +67,12 @@ defineProps({
 })
 
 defineEmits(['view', 'download', 'delete'])
+
+const formatPublishedDate = (date) => {
+  if (!date) return ''
+  const d = date.toDate ? date.toDate() : new Date(date)
+  return formatDate(d)
+}
 </script>
 
 <style scoped>
