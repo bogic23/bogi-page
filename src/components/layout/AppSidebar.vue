@@ -24,9 +24,9 @@
       </router-link>
       
       <router-link to="/dashboard/scores" class="nav-link-custom" :class="{ active: isActive('scores') }">
-        <i class="bi bi-music-note-beamed" />
-        <span v-if="!isCollapsed">My Scores</span>
-      </router-link>
+          <i class="bi bi-music-note-beamed" />
+          <span v-if="!isCollapsed">My Scores</span>
+        </router-link>
       
       <div class="sidebar-divider" />
       
@@ -35,10 +35,23 @@
         <span v-if="!isCollapsed">Portfolio</span>
       </router-link>
       
-      <router-link to="/settings" class="nav-link-custom" :class="{ active: isActive('settings') }">
-        <i class="bi bi-gear" />
-        <span v-if="!isCollapsed">Settings</span>
-      </router-link>
+      <template v-if="authStore.isAuthenticated">
+        <router-link to="/settings" class="nav-link-custom" :class="{ active: isActive('settings') }">
+          <i class="bi bi-gear" />
+          <span v-if="!isCollapsed">Settings</span>
+        </router-link>
+      </template>
+      
+      <template v-else>
+        <router-link to="/login" class="nav-link-custom">
+          <i class="bi bi-box-arrow-in-right" />
+          <span v-if="!isCollapsed">Login</span>
+        </router-link>
+        <router-link to="/register" class="nav-link-custom">
+          <i class="bi bi-person-plus" />
+          <span v-if="!isCollapsed">Sign Up</span>
+        </router-link>
+      </template>
     </nav>
     
     <div class="sidebar-footer">
@@ -57,9 +70,11 @@
 import { ref, computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { useAppStore } from '../../stores/appStore'
+import { useAuthStore } from '../../stores/authStore'
 
 const route = useRoute()
 const appStore = useAppStore()
+const authStore = useAuthStore()
 
 const isCollapsed = ref(false)
 

@@ -38,12 +38,6 @@ export const useScoreStore = defineStore('scores', () => {
   }
 
   const fetchScores = async () => {
-    const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) {
-      scores.value = []
-      return
-    }
-
     loading.value = true
     error.value = null
 
@@ -73,9 +67,6 @@ export const useScoreStore = defineStore('scores', () => {
   }
 
   const fetchScoresFromFirestore = async () => {
-    const authStore = useAuthStore()
-    if (!authStore.isAuthenticated) return []
-
     try {
       const scoresQuery = query(
         collection(db, 'scores'),

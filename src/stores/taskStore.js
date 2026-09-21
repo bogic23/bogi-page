@@ -15,6 +15,25 @@ import { db } from '@/firebase/firebase'
 import { useAuthStore } from './authStore'
 import { toDate } from '@/utils/dateUtils'
 
+const LOCAL_STORAGE_KEY = 'bogi_tasks_guest'
+
+const loadFromLocalStorage = () => {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY)
+    return data ? JSON.parse(data) : []
+  } catch {
+    return []
+  }
+}
+
+const saveToLocalStorage = (tasks) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(tasks))
+  } catch (err) {
+    console.error('Failed to save tasks to localStorage:', err)
+  }
+}
+
 export const useTaskStore = defineStore('tasks', () => {
   // State
   const tasks = ref([])
@@ -33,6 +52,10 @@ export const useTaskStore = defineStore('tasks', () => {
   const initListener = () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated || unsubscribe) {
+      if (!authStore.isAuthenticated) {
+        // Load from localStorage for guest users
+        tasks.value = loadFromLocalStorage()
+      }
       loading.value = false
       return
     }
@@ -62,11 +85,15 @@ export const useTaskStore = defineStore('tasks', () => {
   }
 
   // Watch for auth changes and auto-initialize
-  watch(() => useAuthStore().isAuthenticated, (isAuthenticated) => {
+  watch(() => useAuthStore().isAuthenticated, async (isAuthenticated) => {
     if (isAuthenticated && !unsubscribe) {
+      // Sync localStorage data to Firestore before initializing listener
+      await syncLocalStorageToFirestore()
       initListener()
     } else if (!isAuthenticated) {
       cleanupListener()
+      // Load from localStorage for guest users
+      tasks.value = loadFromLocalStorage()
     }
   }, { immediate: true })
 
@@ -77,6 +104,36 @@ export const useTaskStore = defineStore('tasks', () => {
       unsubscribe = null
     }
     tasks.value = []
+  }
+
+  // Sync localStorage data to Firestore
+  const syncLocalStorageToFirestore = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return
+
+    const localTasks = loadFromLocalStorage()
+    if (localTasks.length === 0) return
+
+    const userId = authStore.user?.uid
+    if (!userId) return
+
+    try {
+      for (const task of localTasks) {
+        const newTask = {
+          ...task,
+          completed: task.completed || false,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          userId,
+          syncedFromLocalStorage: true
+        }
+        await addDoc(collection(db, 'users', userId, 'tasks'), newTask)
+      }
+      // Clear localStorage after successful sync
+      localStorage.removeItem(LOCAL_STORAGE_KEY)
+    } catch (err) {
+      console.error('Failed to sync tasks to Firestore:', err)
+    }
   }
 
   // Getters
@@ -154,22 +211,37 @@ export const useTaskStore = defineStore('tasks', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    const newTask = {
+      ...task,
+      completed: false,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
 
-    try {
-      const newTask = {
-        ...task,
-        completed: false,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        userId
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
+
+      try {
+        const firestoreTask = {
+          ...newTask,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          userId
+        }
+        const docRef = await addDoc(collection(db, 'users', userId, 'tasks'), firestoreTask)
+        return { id: docRef.id, ...firestoreTask }
+      } catch (err) {
+        error.value = err.message
+        throw err
       }
-      const docRef = await addDoc(collection(db, 'users', userId, 'tasks'), newTask)
-      return { id: docRef.id, ...newTask }
-    } catch (err) {
-      error.value = err.message
-      throw err
+    } else {
+      // Guest user - save to localStorage
+      const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      const taskWithId = { ...newTask, id: tempId }
+      tasks.value.unshift(taskWithId)
+      saveToLocalStorage(tasks.value)
+      return taskWithId
     }
   }
 
@@ -182,17 +254,36 @@ export const useTaskStore = defineStore('tasks', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    const updatedData = {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
 
-    try {
-      await updateDoc(doc(db, 'users', userId, 'tasks', id), {
-        ...updates,
-        updatedAt: serverTimestamp()
-      })
-    } catch (err) {
-      error.value = err.message
-      throw err
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
+
+      try {
+        await updateDoc(doc(db, 'users', userId, 'tasks', id), {
+          ...updates,
+          updatedAt: serverTimestamp()
+        })
+        // Update local state
+        const index = tasks.value.findIndex(t => t.id === id)
+        if (index !== -1) {
+          tasks.value[index] = { ...tasks.value[index], ...updatedData }
+        }
+      } catch (err) {
+        error.value = err.message
+        throw err
+      }
+    } else {
+      // Guest user - update localStorage
+      const index = tasks.value.findIndex(t => t.id === id)
+      if (index !== -1) {
+        tasks.value[index] = { ...tasks.value[index], ...updatedData }
+        saveToLocalStorage(tasks.value)
+      }
     }
   }
 
@@ -205,14 +296,21 @@ export const useTaskStore = defineStore('tasks', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
 
-    try {
-      await deleteDoc(doc(db, 'users', userId, 'tasks', id))
-    } catch (err) {
-      error.value = err.message
-      throw err
+      try {
+        await deleteDoc(doc(db, 'users', userId, 'tasks', id))
+        tasks.value = tasks.value.filter(t => t.id !== id)
+      } catch (err) {
+        error.value = err.message
+        throw err
+      }
+    } else {
+      // Guest user - delete from localStorage
+      tasks.value = tasks.value.filter(t => t.id !== id)
+      saveToLocalStorage(tasks.value)
     }
   }
 
@@ -229,7 +327,7 @@ export const useTaskStore = defineStore('tasks', () => {
     if (task) {
       await updateTask(id, {
         completed: !task.completed,
-        completedAt: !task.completed ? serverTimestamp() : null
+        completedAt: !task.completed ? new Date().toISOString() : null
       })
     }
   }
@@ -256,6 +354,7 @@ export const useTaskStore = defineStore('tasks', () => {
     updateTask,
     deleteTask,
     toggleTaskComplete,
-    setFilters
+    setFilters,
+    syncLocalStorageToFirestore
   }
 })

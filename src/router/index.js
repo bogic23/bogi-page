@@ -42,7 +42,6 @@ const router = createRouter({
     {
       path: '/dashboard',
       component: DashboardLayout,
-      meta: { requiresAuth: true },
       children: [
         {
           path: '',
@@ -84,7 +83,6 @@ const router = createRouter({
     {
       path: '/learning',
       component: LearningLayout,
-      meta: { requiresAuth: true },
       children: [
         {
           path: '',

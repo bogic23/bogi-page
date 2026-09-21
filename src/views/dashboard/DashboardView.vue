@@ -4,21 +4,36 @@
     <div class="row mb-4">
       <div class="col-12">
         <div class="welcome-card bg-gradient-primary text-white p-4 rounded-3">
-          <div class="d-flex justify-content-between align-items-center">
+          <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
             <div>
               <h1 class="h3 mb-2">
-                Welcome back, Bogi! 👋
+                {{ authStore.isAuthenticated ? `Welcome back, ${authStore.user?.displayName || 'Bogi'}` : 'Welcome to Bogi Page!' }} 👋
               </h1>
               <p class="mb-0 opacity-75">
                 {{ currentDate }}
               </p>
             </div>
-            <button class="btn btn-light" @click="quickAddTask">
-              <i class="bi bi-plus-lg me-1" />
-              Quick Add
-            </button>
+            <div class="d-flex gap-2">
+              <button class="btn btn-light" @click="quickAddTask">
+                <i class="bi bi-plus-lg me-1" />
+                Quick Add
+              </button>
+              <template v-if="!authStore.isAuthenticated">
+                <router-link to="/login" class="btn btn-outline-light">
+                  <i class="bi bi-box-arrow-in-right me-1" />
+                  Login to Sync
+                </router-link>
+              </template>
+            </div>
           </div>
         </div>
+        <template v-if="!authStore.isAuthenticated">
+          <div class="alert alert-info mt-3 mb-0">
+            <i class="bi bi-info-circle me-2" />
+            You're browsing as a guest. Your tasks, notes, and events will be saved in your browser.
+            <router-link to="/login" class="alert-link ms-2">Login</router-link> or <router-link to="/register" class="alert-link">register</router-link> to sync across devices.
+          </div>
+        </template>
       </div>
     </div>
     
@@ -179,6 +194,7 @@
 <script setup>
 import { computed } from 'vue'
 import { useRouter } from 'vue-router'
+import { useAuthStore } from '../../stores/authStore'
 import { useTaskStore } from '../../stores/taskStore'
 import { useCalendarStore } from '../../stores/calendarStore'
 import { useNoteStore } from '../../stores/noteStore'
@@ -189,6 +205,7 @@ import { formatDate } from '../../utils/date'
 import { truncateText } from '../../utils/format'
 
 const router = useRouter()
+const authStore = useAuthStore()
 const taskStore = useTaskStore()
 const calendarStore = useCalendarStore()
 const noteStore = useNoteStore()

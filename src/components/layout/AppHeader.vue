@@ -17,30 +17,45 @@
         </span>
       </button>
       
-      <div class="dropdown">
-        <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
-          <i class="bi bi-person-circle me-1" />
-          <span class="d-none d-md-inline">User</span>
-        </button>
-        <ul class="dropdown-menu dropdown-menu-end">
-          <li>
-            <router-link class="dropdown-item" to="/settings">
-              <i class="bi bi-gear me-2" />Settings
-            </router-link>
-          </li>
-          <li>
-            <router-link class="dropdown-item" to="/portfolio">
-              <i class="bi bi-person me-2" />View Portfolio
-            </router-link>
-          </li>
-          <li><hr class="dropdown-divider"></li>
-          <li>
-            <button class="dropdown-item text-danger" @click="logout">
-              <i class="bi bi-box-arrow-right me-2" />Logout
-            </button>
-          </li>
-        </ul>
-      </div>
+      <template v-if="authStore.isAuthenticated">
+        <div class="dropdown">
+          <button class="btn btn-light dropdown-toggle" data-bs-toggle="dropdown">
+            <i class="bi bi-person-circle me-1" />
+            <span class="d-none d-md-inline">{{ authStore.user?.displayName || 'User' }}</span>
+          </button>
+          <ul class="dropdown-menu dropdown-menu-end">
+            <li>
+              <router-link class="dropdown-item" to="/settings">
+                <i class="bi bi-gear me-2" />Settings
+              </router-link>
+            </li>
+            <li>
+              <router-link class="dropdown-item" to="/portfolio">
+                <i class="bi bi-person me-2" />View Portfolio
+              </router-link>
+            </li>
+            <li><hr class="dropdown-divider"></li>
+            <li>
+              <button class="dropdown-item text-danger" @click="logout">
+                <i class="bi bi-box-arrow-right me-2" />Logout
+              </button>
+            </li>
+          </ul>
+        </div>
+      </template>
+      
+      <template v-else>
+        <div class="d-flex gap-2">
+          <router-link to="/login" class="btn btn-outline-primary">
+            <i class="bi bi-box-arrow-in-right me-1" />
+            <span class="d-none d-sm-inline">Login</span>
+          </router-link>
+          <router-link to="/register" class="btn btn-primary">
+            <i class="bi bi-person-plus me-1" />
+            <span class="d-none d-sm-inline">Sign Up</span>
+          </router-link>
+        </div>
+      </template>
     </div>
   </header>
 </template>

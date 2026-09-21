@@ -11,16 +11,24 @@
           Browse and manage sheet music collection
         </p>
       </div>
-      <AppButton 
-        v-if="authStore.isAdmin"
-        variant="primary" 
-        icon="cloud-upload" 
-        :loading="scoreStore.uploading"
-        :disabled="!scoreStore.isReady"
-        @click="openUploadModal"
-      >
-        Upload Score
-      </AppButton>
+      <div class="d-flex gap-2 flex-wrap">
+        <template v-if="!authStore.isAuthenticated">
+          <div class="alert alert-info d-flex align-items-center mb-0 py-2 px-3" role="alert">
+            <i class="bi bi-info-circle me-2" />
+            <span class="small">View only mode. <router-link to="/login" class="alert-link">Login</router-link> to download, create licenses, or upload scores.</span>
+          </div>
+        </template>
+        <AppButton 
+          v-if="authStore.isAdmin"
+          variant="primary" 
+          icon="cloud-upload" 
+          :loading="scoreStore.uploading"
+          :disabled="!scoreStore.isReady"
+          @click="openUploadModal"
+        >
+          Upload Score
+        </AppButton>
+      </div>
     </div>
 
     <!-- Search & Filters -->
@@ -74,7 +82,7 @@
         <table class="table table-hover align-middle mb-0">
           <thead class="table-light">
             <tr>
-              <th style="width: 40%;">
+              <th style="width: 45%;">
                 Title
               </th>
               <th style="width: 20%;">
@@ -83,7 +91,7 @@
               <th style="width: 25%;">
                 Notes
               </th>
-              <th style="width: 15%;" class="text-end">
+              <th style="width: 10%;" class="text-end">
                 Actions
               </th>
             </tr>
@@ -111,7 +119,7 @@
                   v-if="score.notes"
                   class="text-muted"
                   style="max-width: 200px;"
-                  title="{{ score.notes }}"
+                  :title="score.notes"
                 >
                   {{ score.notes }}
                 </span>
@@ -126,28 +134,36 @@
                     title="View"
                     @click="handleViewScore(score)"
                   />
-                  <AppButton 
-                    size="sm" 
-                    variant="outline-secondary" 
-                    icon="download" 
-                    title="Download"
-                    @click="handleDownloadScore(score)"
-                  />
-                  <AppButton 
-                    size="sm" 
-                    variant="outline-success" 
-                    icon="file-text" 
-                    title="Create License"
-                    @click="openLicenseModal(score)"
-                  />
-                  <AppButton 
-                    v-if="authStore.isAdmin"
-                    size="sm" 
-                    variant="outline-danger" 
-                    icon="trash" 
-                    title="Delete"
-                    @click="handleDeleteScore(score)"
-                  />
+                  <template v-if="authStore.isAuthenticated">
+                    <AppButton 
+                      size="sm" 
+                      variant="outline-secondary" 
+                      icon="download" 
+                      title="Download"
+                      @click="handleDownloadScore(score)"
+                    />
+                    <AppButton 
+                      size="sm" 
+                      variant="outline-success" 
+                      icon="file-text" 
+                      title="Create License"
+                      @click="openLicenseModal(score)"
+                    />
+                    <AppButton 
+                      v-if="authStore.isAdmin"
+                      size="sm" 
+                      variant="outline-danger" 
+                      icon="trash" 
+                      title="Delete"
+                      @click="handleDeleteScore(score)"
+                    />
+                  </template>
+                  <template v-else>
+                    <span class="text-muted small d-flex align-items-center px-2">
+                      <i class="bi bi-lock me-1" />
+                      Login for more
+                    </span>
+                  </template>
                 </div>
               </td>
             </tr>
@@ -166,23 +182,33 @@
         <p class="text-muted">
           {{ filters.search ? 'Try adjusting your search' : 'Scores will appear here once uploaded' }}
         </p>
-        <AppButton 
-          v-if="!filters.search && authStore.isAdmin"
-          variant="primary" 
-          icon="cloud-upload" 
-          :disabled="!scoreStore.isReady"
-          @click="openUploadModal"
-        >
-          Upload Score
-        </AppButton>
-        <AppButton 
-          v-else
-          variant="outline-secondary" 
-          icon="x-circle" 
-          @click="clearSearch"
-        >
-          Clear Search
-        </AppButton>
+        <template v-if="!filters.search">
+          <AppButton 
+            v-if="authStore.isAdmin"
+            variant="primary" 
+            icon="cloud-upload" 
+            :disabled="!scoreStore.isReady"
+            @click="openUploadModal"
+          >
+            Upload Score
+          </AppButton>
+          <AppButton 
+            v-else-if="!authStore.isAuthenticated"
+            variant="outline-primary" 
+            icon="box-arrow-in-right"
+            @click="$router.push('/login')"
+          >
+            Login to Upload
+          </AppButton>
+          <AppButton 
+            v-else
+            variant="outline-secondary" 
+            icon="x-circle" 
+            @click="clearSearch"
+          >
+            Clear Search
+          </AppButton>
+        </template>
       </div>
     </AppCard>
 
@@ -441,6 +467,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
+import { useRouter } from 'vue-router'
 import { jsPDF } from 'jspdf'
 import { useScoreStore } from '@/stores/scoreStore'
 import { useAuthStore } from '@/stores/authStore'
@@ -450,6 +477,7 @@ import AppCard from '@/components/common/AppCard.vue'
 import AppButton from '@/components/common/AppButton.vue'
 import AppModal from '@/components/common/AppModal.vue'
 
+const router = useRouter()
 const scoreStore = useScoreStore()
 const authStore = useAuthStore()
 const appStore = useAppStore()

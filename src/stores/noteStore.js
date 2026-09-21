@@ -15,6 +15,25 @@ import { db } from '@/firebase/firebase'
 import { useAuthStore } from './authStore'
 import { toDate } from '@/utils/dateUtils'
 
+const LOCAL_STORAGE_KEY = 'bogi_notes_guest'
+
+const loadFromLocalStorage = () => {
+  try {
+    const data = localStorage.getItem(LOCAL_STORAGE_KEY)
+    return data ? JSON.parse(data) : []
+  } catch {
+    return []
+  }
+}
+
+const saveToLocalStorage = (notes) => {
+  try {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(notes))
+  } catch (err) {
+    console.error('Failed to save notes to localStorage:', err)
+  }
+}
+
 export const useNoteStore = defineStore('notes', () => {
   // State
   const notes = ref([])
@@ -32,6 +51,10 @@ export const useNoteStore = defineStore('notes', () => {
   const initListener = () => {
     const authStore = useAuthStore()
     if (!authStore.isAuthenticated || unsubscribe) {
+      if (!authStore.isAuthenticated) {
+        // Load from localStorage for guest users
+        notes.value = loadFromLocalStorage()
+      }
       loading.value = false
       return
     }
@@ -61,11 +84,15 @@ export const useNoteStore = defineStore('notes', () => {
   }
 
   // Watch for auth changes and auto-initialize
-  watch(() => useAuthStore().isAuthenticated, (isAuthenticated) => {
+  watch(() => useAuthStore().isAuthenticated, async (isAuthenticated) => {
     if (isAuthenticated && !unsubscribe) {
+      // Sync localStorage data to Firestore before initializing listener
+      await syncLocalStorageToFirestore()
       initListener()
     } else if (!isAuthenticated) {
       cleanupListener()
+      // Load from localStorage for guest users
+      notes.value = loadFromLocalStorage()
     }
   }, { immediate: true })
 
@@ -76,6 +103,37 @@ export const useNoteStore = defineStore('notes', () => {
       unsubscribe = null
     }
     notes.value = []
+  }
+
+  // Sync localStorage data to Firestore
+  const syncLocalStorageToFirestore = async () => {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated) return
+
+    const localNotes = loadFromLocalStorage()
+    if (localNotes.length === 0) return
+
+    const userId = authStore.user?.uid
+    if (!userId) return
+
+    try {
+      for (const note of localNotes) {
+        const newNote = {
+          ...note,
+          pinned: note.pinned || false,
+          tags: note.tags || [],
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          userId,
+          syncedFromLocalStorage: true
+        }
+        await addDoc(collection(db, 'users', userId, 'notes'), newNote)
+      }
+      // Clear localStorage after successful sync
+      localStorage.removeItem(LOCAL_STORAGE_KEY)
+    } catch (err) {
+      console.error('Failed to sync notes to Firestore:', err)
+    }
   }
 
   // Getters
@@ -161,23 +219,38 @@ export const useNoteStore = defineStore('notes', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    const newNote = {
+      ...note,
+      pinned: note.pinned || false,
+      tags: note.tags || [],
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    }
 
-    try {
-      const newNote = {
-        ...note,
-        pinned: note.pinned || false,
-        tags: note.tags || [],
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
-        userId
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
+
+      try {
+        const firestoreNote = {
+          ...newNote,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+          userId
+        }
+        const docRef = await addDoc(collection(db, 'users', userId, 'notes'), firestoreNote)
+        return { id: docRef.id, ...firestoreNote }
+      } catch (err) {
+        error.value = err.message
+        throw err
       }
-      const docRef = await addDoc(collection(db, 'users', userId, 'notes'), newNote)
-      return { id: docRef.id, ...newNote }
-    } catch (err) {
-      error.value = err.message
-      throw err
+    } else {
+      // Guest user - save to localStorage
+      const tempId = 'temp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9)
+      const noteWithId = { ...newNote, id: tempId }
+      notes.value.unshift(noteWithId)
+      saveToLocalStorage(notes.value)
+      return noteWithId
     }
   }
 
@@ -190,17 +263,36 @@ export const useNoteStore = defineStore('notes', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    const updatedData = {
+      ...updates,
+      updatedAt: new Date().toISOString()
+    }
 
-    try {
-      await updateDoc(doc(db, 'users', userId, 'notes', id), {
-        ...updates,
-        updatedAt: serverTimestamp()
-      })
-    } catch (err) {
-      error.value = err.message
-      throw err
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
+
+      try {
+        await updateDoc(doc(db, 'users', userId, 'notes', id), {
+          ...updates,
+          updatedAt: serverTimestamp()
+        })
+        // Update local state
+        const index = notes.value.findIndex(n => n.id === id)
+        if (index !== -1) {
+          notes.value[index] = { ...notes.value[index], ...updatedData }
+        }
+      } catch (err) {
+        error.value = err.message
+        throw err
+      }
+    } else {
+      // Guest user - update localStorage
+      const index = notes.value.findIndex(n => n.id === id)
+      if (index !== -1) {
+        notes.value[index] = { ...notes.value[index], ...updatedData }
+        saveToLocalStorage(notes.value)
+      }
     }
   }
 
@@ -213,14 +305,21 @@ export const useNoteStore = defineStore('notes', () => {
       await authStore.initAuth()
     }
 
-    const userId = authStore.user?.uid
-    if (!userId) throw new Error('Not authenticated')
+    if (authStore.isAuthenticated) {
+      const userId = authStore.user?.uid
+      if (!userId) throw new Error('Not authenticated')
 
-    try {
-      await deleteDoc(doc(db, 'users', userId, 'notes', id))
-    } catch (err) {
-      error.value = err.message
-      throw err
+      try {
+        await deleteDoc(doc(db, 'users', userId, 'notes', id))
+        notes.value = notes.value.filter(n => n.id !== id)
+      } catch (err) {
+        error.value = err.message
+        throw err
+      }
+    } else {
+      // Guest user - delete from localStorage
+      notes.value = notes.value.filter(n => n.id !== id)
+      saveToLocalStorage(notes.value)
     }
   }
 
@@ -267,6 +366,7 @@ export const useNoteStore = defineStore('notes', () => {
     deleteNote,
     togglePin,
     setFilters,
-    getNoteById
+    getNoteById,
+    syncLocalStorageToFirestore
   }
 })
